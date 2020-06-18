@@ -18,14 +18,14 @@ let node_INDUCT,node_RECURSION = define_type
   "node = Node num";;
 
 (* ------------------------------------------------------------------------- *)
-(* Also "abstract" propositional formulas (i.e. we never unfold "eval").     *)
+(* Also "abstract" propositional formulas (i.e. we never unfold "evl").     *)
 (* ------------------------------------------------------------------------- *)
 
 let propform_INDUCT,propform_RECURSION = define_type
   "propform = Propform (num->bool)->bool";;
 
-let eval = new_recursive_definition propform_RECURSION
-  `eval (Propform p) v = p v`;;
+let evl = new_recursive_definition propform_RECURSION
+  `evl (Propform p) v = p v`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Quaternary lattice.                                                       *)
@@ -100,7 +100,7 @@ let tholds = new_recursive_definition trajform_RECURSION
   `(tholds (Is_0 nd) seq v <=> ZERO <<= seq 0 nd v) /\
    (tholds (Is_1 nd) seq v <=> ONE <<= seq 0 nd v) /\
    (tholds (Andj tf1 tf2) seq v <=> tholds tf1 seq v /\ tholds tf2 seq v) /\
-   (tholds (When tf1 p) seq v <=> eval p v ==> tholds tf1 seq v) /\
+   (tholds (When tf1 p) seq v <=> evl p v ==> tholds tf1 seq v) /\
    (tholds (Next(tf1)) seq v <=> tholds tf1 (\t. seq(t + 1)) v)`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -111,7 +111,7 @@ let defseq = new_recursive_definition trajform_RECURSION
   `(defseq (Is_0 n) t nd v = ((n = nd) /\ (t = 0)) >-> ZERO) /\
    (defseq (Is_1 n) t nd v = ((n = nd) /\ (t = 0)) >-> ONE) /\
    (defseq (Andj tf1 tf2) t nd v = defseq tf1 t nd v && defseq tf2 t nd v) /\
-   (defseq (When tf1 p) t nd v =  eval p v >-> defseq tf1 t nd v) /\
+   (defseq (When tf1 p) t nd v =  evl p v >-> defseq tf1 t nd v) /\
    (defseq (Next(tf1)) t nd v = ~(t = 0) >-> defseq tf1 (t - 1) nd v)`;;
 
 (* ------------------------------------------------------------------------- *)
