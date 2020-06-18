@@ -593,12 +593,12 @@ let rec type_subst i ty =
     (*Constructs an effectiveIn expression for the given variable in the given term*)
   let effectiveIn var tm = 
     (*This function checks that the variable name  does not exist in the term - if it does, it adds ' until a valid name is found*)
-    let rec unusedVarName var tm root = let dName = fst (dest_var var) in
+    let rec unusedVarName var tm root = let dName,dType = dest_var var in
       match tm with
-      | Var(a,b) -> if a = dName then (unusedVarName (mk_var ((dName ^ "'"),type_of var)) root root) else dName
+      | Var(a,b) -> if a = dName then (unusedVarName (mk_var ((dName ^ "'"),dType)) root root) else dName
       | Const(_,_) -> dName
-      | Comb(a,b) -> let aN = (unusedVarName var a root) and bN = (unusedVarName var b root) in if aN <> dName then aN else if bN <> dName then bN else dName
-      | Abs(a,b) -> let aN = (unusedVarName var a root) and bN = (unusedVarName var b root) in if aN <> dName then aN else if bN <> dName then bN else dName
+      | Comb(a,b) -> let aN = (unusedVarName var a root) in (unusedVarName (mk_var(aN,dType)) b root)
+      | Abs(a,b) -> let aN = (unusedVarName var a root) in (unusedVarName (mk_var(aN,dType)) b root)
       | Quote(e,ty) -> unusedVarName var e root
       | Hole(e,ty) -> unusedVarName var e root
       | Eval(e,ty) -> unusedVarName var e root
