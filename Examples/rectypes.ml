@@ -2,7 +2,7 @@
 (* Some (mutually, nested) recursive types from various sources.             *)
 (* ========================================================================= *)
 
-time define_type "Term = Var A B | App bool Termlist;
+time define_type "Term = Var A B | Apply bool Termlist;
               Termlist = Empty | Consp Term Termlist";;
 
 time define_type "List = Nil | Cons A List";;
