@@ -1167,6 +1167,16 @@ let MOD_LT = prove
   REPEAT STRIP_TAC THEN MATCH_MP_TAC MOD_UNIQ THEN
   EXISTS_TAC `0` THEN ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES]);;
 
+let MOD_ADD_CASES = prove
+ (`!m n p.
+        m < p /\ n < p
+        ==> (m + n) MOD p = if m + n < p then m + n else (m + n) - p`,
+  REPEAT STRIP_TAC THEN COND_CASES_TAC THEN ASM_SIMP_TAC[MOD_LT] THEN
+  MATCH_MP_TAC MOD_UNIQ THEN EXISTS_TAC `1` THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[NOT_LT]) THEN CONJ_TAC THENL
+   [REWRITE_TAC[MULT_CLAUSES] THEN ASM_MESON_TAC[SUB_ADD; ADD_SYM];
+    ASM_MESON_TAC[LT_ADD_RCANCEL; SUB_ADD; LT_ADD2]]);;
+
 let MOD_EQ = prove
  (`!m n p q. m = n + q * p ==> m MOD p = n MOD p`,
   REPEAT GEN_TAC THEN ASM_CASES_TAC `p = 0` THENL
@@ -1354,6 +1364,10 @@ let ODD_MOD = prove
    [SIMP_TAC[DIVISION; TWO; NOT_SUC]; ALL_TAC] THEN
   SPEC_TAC(`n MOD 2`,`n:num`) THEN
   REWRITE_TAC[TWO; ONE; LT] THEN MESON_TAC[NOT_SUC]);;
+
+let MOD_2_CASES = prove
+ (`!n. n MOD 2 = if EVEN n then 0 else 1`,
+  MESON_TAC[EVEN_MOD; ODD_MOD; NOT_ODD]);;
 
 let MOD_MULT_RMOD = prove
  (`!m n p. (m * (p MOD n)) MOD n = (m * p) MOD n`,
