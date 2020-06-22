@@ -1336,12 +1336,14 @@ let INT_REM_MOD_SELF = prove
   REWRITE_TAC[INT_ARITH `r - m:int = n * --d <=> d * n + r = m`] THEN
   REWRITE_TAC[INT_DIVISION_DECOMP]);;
 
+
 let INT_NEG_REM = prove
  (`!n p. --(n rem p) rem p = --n rem p`,
   REPEAT GEN_TAC THEN REWRITE_TAC[INT_REM_EQ] THEN
   MATCH_MP_TAC(INTEGER_RULE
    `(a:int == b) (mod n) ==> (--a == --b) (mod n)`) THEN
   REWRITE_TAC[INT_REM_MOD_SELF]);;
+
 
 let INT_ADD_REM = prove
  (`!m n p. (m rem p + n rem p) rem p = (m + n) rem p`,
@@ -1350,6 +1352,7 @@ let INT_ADD_REM = prove
     ==> (x + y == x' + y') (mod n)`) THEN
   REWRITE_TAC[INT_REM_MOD_SELF]);;
 
+
 let INT_SUB_REM = prove
  (`!m n p. (m rem p - n rem p) rem p = (m - n) rem p`,
   REPEAT GEN_TAC THEN REWRITE_TAC[INT_REM_EQ] THEN MATCH_MP_TAC(INTEGER_RULE
@@ -1357,12 +1360,14 @@ let INT_SUB_REM = prove
     ==> (x - y == x' - y') (mod n)`) THEN
   REWRITE_TAC[INT_REM_MOD_SELF]);;
 
+
 let INT_MUL_REM = prove
  (`!m n p. (m rem p * n rem p) rem p = (m * n) rem p`,
   REPEAT GEN_TAC THEN REWRITE_TAC[INT_REM_EQ] THEN MATCH_MP_TAC(INTEGER_RULE
    `(x:int == x') (mod n) /\ (y == y') (mod n)
     ==> (x * y == x' * y') (mod n)`) THEN
   REWRITE_TAC[INT_REM_MOD_SELF]);;
+
 
 let INT_POW_REM = prove
  (`!m n p. ((m rem p) pow n) rem p = (m pow n) rem p`,
@@ -1567,6 +1572,7 @@ let INT_CONG_DIV2 = prove
       &0 <= m /\ (a == b) (mod (m * n)) ==> (a div m == b div m) (mod n)`,
   SIMP_TAC[GSYM INT_REM_EQ; INT_DIV_REM]);;
 
+
 (* ------------------------------------------------------------------------- *)
 (* Arithmetic operations also on div and rem, hence the whole lot.           *)
 (* ------------------------------------------------------------------------- *)
@@ -1608,7 +1614,9 @@ let INT_RED_CONV =
      `x > y`,INT_GT_CONV;
      `x:int = y`,INT_EQ_CONV;
      `--x`,CHANGED_CONV INT_NEG_CONV;
+
      `int_sgn(x)`,INT_SGN_CONV;
+
      `abs(x)`,INT_ABS_CONV;
      `x + y`,INT_ADD_CONV;
      `x - y`,INT_SUB_CONV;

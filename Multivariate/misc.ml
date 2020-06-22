@@ -276,6 +276,7 @@ let HAS_SIZE_1_EXISTS = prove
   REPEAT GEN_TAC THEN CONV_TAC(LAND_CONV HAS_SIZE_CONV) THEN
   REWRITE_TAC[EXTENSION; IN_SING] THEN MESON_TAC[]);;
 
+
 (* ------------------------------------------------------------------------- *)
 (* Characterizations of solvability of small systems of equations.           *)
 (* ------------------------------------------------------------------------- *)
@@ -308,6 +309,7 @@ let LINEAR_EQUATIONS_2_EQ = prove
   GEN_REWRITE_TAC I [SWAP_EXISTS_THM] THEN REWRITE_TAC[UNWIND_THM2] THEN
   REWRITE_TAC[LINEAR_EQUATIONS_1_EQ] THEN
   REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC REAL_RING);;
+
 
 (* ------------------------------------------------------------------------- *)
 (* Handy definitions and basic lemmas for real intervals.                    *)
