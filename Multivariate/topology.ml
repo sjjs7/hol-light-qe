@@ -419,6 +419,7 @@ let CONTINUOUS_MAP_EUCLIDEAN_COMPONENT = prove
   STRIP_ASSUME_TAC THENL [REWRITE_TAC[FINITE_INDEX_INRANGE]; ASM_SIMP_TAC[]]);;
 
 (* ------------------------------------------------------------------------- *)
+
 (* Open and closed balls and spheres.                                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -11348,6 +11349,7 @@ let EUCLIDEAN_CONNECTED_COMPONENTS_OF = prove
   REWRITE_TAC[TOPSPACE_EUCLIDEAN_SUBTOPOLOGY;
               CONNECTED_COMPONENT_OF_EUCLIDEAN]);;
 
+
 let PAIRWISE_SEPARATED_COMPONENTS = prove
  (`!s:real^N->bool. pairwise (separated_in euclidean) (components s)`,
   GEN_TAC THEN
@@ -11356,6 +11358,7 @@ let PAIRWISE_SEPARATED_COMPONENTS = prove
   REWRITE_TAC[EUCLIDEAN_CONNECTED_COMPONENTS_OF] THEN
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] PAIRWISE_IMP) THEN
   SIMP_TAC[SEPARATED_IN_SUBTOPOLOGY]);;
+
 
 let COMPONENTS_TRANSLATION = prove
  (`!a s. components(IMAGE (\x. a + x) s) =
