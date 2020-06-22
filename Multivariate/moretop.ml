@@ -4656,6 +4656,7 @@ let REAL_CONTINUOUS_ON_INVERSE_ALT = prove
            ==> g real_continuous_on t`,
   MESON_TAC[REAL_CONTINUOUS_ON_INVERSE]);;
 
+
 let SIMPLY_CONNECTED_SPHERE_EQ = prove
  (`!a:real^N r.
         simply_connected(sphere(a,r)) <=> 3 <= dimindex(:N) \/ r <= &0`,

@@ -9875,6 +9875,7 @@ let HAUSDORFF_SPACE_PROPER_MAP_IMAGE = prove
   REPEAT(FIRST_X_ASSUM(MP_TAC o MATCH_MP OPEN_IN_SUBSET)) THEN
   ASM SET_TAC[]);;
 
+
 let HAUSDORFF_SPACE_CLOSED_CONTINUOUS_MAP_IMAGE = prove
  (`!top top' (f:A->B).
         compact_space top /\ hausdorff_space top /\
@@ -10583,6 +10584,7 @@ let EVENTUALLY_UBOUND_LE_SEQUENTIALLY = prove
   REWRITE_TAC[IN_ELIM_THM; REAL_LE_REFL] THEN EXISTS_TAC `m:num` THEN
   ASM_REWRITE_TAC[]);;
 
+
 let EVENTUALLY_LBOUND_LE_SEQUENTIALLY = prove
  (`!f. (?b. eventually (\n. b <= f n) sequentially) <=> (?b. !n. b <= f n)`,
   GEN_TAC THEN EQ_TAC THEN REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THENL
@@ -10928,6 +10930,7 @@ let IS_METRIC_SPACE_SUBSPACE = prove
  (`!(s:A->bool) d. is_metric_space (s,d) ==>
                    (! s'. s' SUBSET s ==> is_metric_space (s',d))`,
   SIMP_TAC[SUBSET; is_metric_space]);;
+
 
 let mspace = new_definition
   `!m:A metric. mspace m = FST (dest_metric m)`;;
@@ -11290,6 +11293,7 @@ let CENTRE_IN_MCBALL_EQ = prove
   REPEAT GEN_TAC THEN REWRITE_TAC[IN_MCBALL] THEN
   ASM_CASES_TAC `x:A IN mspace m` THEN ASM_SIMP_TAC[MDIST_REFL]);;
 
+
 let MCBALL_EQ_EMPTY = prove
  (`!m x:A r. mcball m (x,r) = {} <=> ~(x IN mspace m) \/ r < &0`,
   REPEAT GEN_TAC THEN
@@ -11299,6 +11303,7 @@ let MCBALL_EQ_EMPTY = prove
 let MCBALL_EMPTY = prove
  (`!m (x:A) r. r < &0 ==> mcball m (x,r) = {}`,
   SIMP_TAC[MCBALL_EQ_EMPTY]);;
+
 
 let MCBALL_EMPTY_ALT = prove
  (`!m (x:A) r. ~(x IN mspace m) ==> mcball m (x,r) = {}`,
@@ -11321,6 +11326,9 @@ let MCBALL_SUBSET = prove
   STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
   CUT_TAC `mdist m (y,z) <= mdist m (x:A,y) + mdist m (x,z)` THENL
   [ASM_REAL_ARITH_TAC; ASM_MESON_TAC[MDIST_SYM; MDIST_TRIANGLE]]);;
+
+
+
 
 let MCBALL_SUBSET_CONCENTRIC = prove
  (`!m (x:A) a b. a <= b ==> mcball m (x,a) SUBSET mcball m (x,b)`,
@@ -11369,6 +11377,7 @@ let CLOSED_IN_MCBALL = prove
   SUBGOAL_THEN `mdist m (x,y) <= mdist m (x:A,z) + mdist m (z,y)` MP_TAC THENL
   [ASM_SIMP_TAC[MDIST_TRIANGLE]; ALL_TAC] THEN
   ASM_SIMP_TAC[MDIST_SYM] THEN ASM_REAL_ARITH_TAC);;
+
 
 let MCBALL_SUBMETRIC_EQ = prove
  (`!m s a:A r. mcball (submetric m s) (a,r) =
@@ -11574,6 +11583,7 @@ let MBOUNDED_EMPTY = prove
  (`!m:A metric. mbounded m {}`,
   REWRITE_TAC[mbounded; EMPTY_SUBSET]);;
 
+
 let MBOUNDED_MCBALL = prove
  (`!m:A metric c b. mbounded m (mcball m (c,b))`,
   REWRITE_TAC[mbounded] THEN MESON_TAC[SUBSET_REFL]);;
@@ -11597,6 +11607,7 @@ let MBOUNDED_INSERT = prove
   MAP_EVERY EXISTS_TAC [`c:A`; `max b (mdist m (c:A,a))`] THEN
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[REAL_MAX_MAX] THEN
   TRANS_TAC REAL_LE_TRANS `b:real` THEN ASM_SIMP_TAC[REAL_MAX_MAX]);;
+
 
 let MBOUNDED_INTER = prove
  (`!m:A metric s t. mbounded m s /\ mbounded m t ==> mbounded m (s INTER t)`,
@@ -13950,6 +13961,7 @@ let NEIGHBOURHOOD_BASE_AT_UNLOCALIZED = prove
   FIRST_X_ASSUM MATCH_MP_TAC THEN EXISTS_TAC `v:A->bool` THEN
   ASM_SIMP_TAC[IN_INTER; OPEN_IN_INTER] THEN ASM SET_TAC[]);;
 
+
 let NEIGHBOURHOOD_BASE_OF_UNLOCALIZED = prove
  (`!top P:(A->bool)->bool.
        (!s t. P s /\ open_in top t /\ ~(t = {}) /\ t SUBSET s ==> P t)
@@ -14312,6 +14324,7 @@ let KOLMOGOROV_QUOTIENT_EQ_ALT = prove
     FIRST_X_ASSUM(MP_TAC o MATCH_MP OPEN_IN_SUBSET)] THEN
   SET_TAC[]);;
 
+
 let KOLMOGOROV_QUOTIENT_CONTINUOUS_MAP = prove
  (`!top top' (f:A->B) x.
         continuous_map (top,top') f /\ t0_space top' /\ x IN topspace top
@@ -14388,6 +14401,7 @@ let RETRACT_OF_SPACE_KOLMOGOROV_QUOTIENT_IMAGE = prove
   GEN_TAC THEN REWRITE_TAC[RETRACT_OF_SPACE_RETRACTION_MAPS] THEN
   REWRITE_TAC[SUBSET; FORALL_IN_IMAGE; KOLMOGOROV_QUOTIENT_IN_TOPSPACE] THEN
   MESON_TAC[RETRACTION_MAPS_KOLMOGOROV_QUOTIENT]);;
+
 
 let KOLMOGOROV_QUOTIENT_LIFT_EXISTS = prove
  (`!top top' (f:A->B) s.
@@ -14552,6 +14566,7 @@ let REGULAR_T1_EQ_HAUSDORFF_SPACE = prove
  (`!top:A topology.
         regular_space top ==> (t1_space top <=> hausdorff_space top)`,
   MESON_TAC[REGULAR_T1_IMP_HAUSDORFF_SPACE; HAUSDORFF_IMP_T1_SPACE]);;
+
 
 let COMPACT_HAUSDORFF_IMP_REGULAR_SPACE = prove
  (`!top:A topology.
@@ -14760,6 +14775,7 @@ let REGULAR_SPACE_PRODUCT_TOPOLOGY = prove
     ASM_MESON_TAC[REWRITE_RULE[SUBSET] OPEN_IN_SUBSET];
     REWRITE_TAC[SUBSET_CARTESIAN_PRODUCT] THEN ASM SET_TAC[];
     REWRITE_TAC[SUBSET_CARTESIAN_PRODUCT] THEN ASM SET_TAC[]]);;
+
 
 let CLOSED_MAP_PAIRED_GEN = prove
  (`!top top1 top2 (f:A->B) (g:A->C).
@@ -15091,6 +15107,7 @@ let COMPACT_IMP_LOCALLY_COMPACT_SPACE = prove
   REPEAT STRIP_TAC THEN REWRITE_TAC[locally_compact_space] THEN
   REPEAT STRIP_TAC THEN REPEAT(EXISTS_TAC `topspace top:A->bool`) THEN
   ASM_REWRITE_TAC[GSYM compact_space; OPEN_IN_TOPSPACE; SUBSET_REFL]);;
+
 
 let NEIGHBOURHOOD_BASE_IMP_LOCALLY_COMPACT_SPACE = prove
  (`!top:A topology.
@@ -22911,6 +22928,10 @@ let LOCALLY_COMPACT_REGULAR_IMP_COMPLETELY_REGULAR_SPACE = prove
   ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
    [ALL_TAC; REPEAT STRIP_TAC THEN COND_CASES_TAC THEN ASM SET_TAC[]] THEN
   CONJ_TAC THENL
+
+
+
+
    [ALL_TAC; ASM_MESON_TAC[ENDS_IN_UNIT_REAL_INTERVAL]] THEN
   REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
   X_GEN_TAC `c:real->bool` THEN DISCH_TAC THEN
@@ -23221,6 +23242,7 @@ let PATH_CONNECTED_SPACE_IMP_CARD_GE = prove
     ASM_SIMP_TAC[COMPACT_IN_PATH_IMAGE; COMPACT_SPACE_SUBTOPOLOGY];
     MP_TAC ENDS_IN_UNIT_REAL_INTERVAL THEN ASM SET_TAC[]]);;
 
+
 let CONNECTED_SPACE_IMP_UNCOUNTABLE = prove
  (`!top:A topology.
         connected_space top /\ regular_space top /\ hausdorff_space top /\
@@ -23231,6 +23253,7 @@ let CONNECTED_SPACE_IMP_UNCOUNTABLE = prove
   ASM_SIMP_TAC[NOT_IMP; CARD_NOT_LE; COUNTABLE_IMP_CARD_LT_REAL] THEN
   MATCH_MP_TAC REGULAR_LINDELOF_IMP_NORMAL_SPACE THEN
   ASM_SIMP_TAC[COUNTABLE_IMP_LINDELOF_SPACE]);;
+
 
 (* ------------------------------------------------------------------------- *)
 (* Locally path-connected spaces.                                            *)
@@ -24266,6 +24289,7 @@ let K_SPACE_OPEN = prove
   FIRST_X_ASSUM(MP_TAC o SPEC `k:A->bool`) THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC EQ_IMP THEN AP_TERM_TAC THEN ASM SET_TAC[]);;
 
+
 let K_SPACE_ALT = prove
  (`!top:A topology.
         k_space top <=>
@@ -24770,10 +24794,12 @@ let CLOSED_MAP_INTO_K_SPACE_EQ = prove
   ASM_SIMP_TAC[CLOSED_MAP_RESTRICTION]);;
 
 let PROPER_MAP_INTO_K_SPACE = prove
+
  (`!top top' (f:A->B).
       k_space top' /\
       IMAGE f (topspace top) SUBSET topspace top' /\
       (!k. compact_in top' k
+
            ==> proper_map(subtopology top {x | x IN topspace top /\ f x IN k},
                           subtopology top' k) f)
       ==> proper_map(top,top') f`,
@@ -24939,6 +24965,7 @@ let COMPACT_SPACE_KIFICATION = prove
  (`!top:A topology. compact_space(kification top) <=> compact_space top`,
   REWRITE_TAC[compact_space; COMPACT_IN_KIFICATION; TOPSPACE_KIFICATION]);;
 
+
 let KIFICATION_KIFICATION = prove
  (`!top:A topology. kification(kification top) = kification top`,
   REWRITE_TAC[TOPOLOGY_EQ; OPEN_IN_KIFICATION; TOPSPACE_KIFICATION;
@@ -24954,6 +24981,7 @@ let KIFICATION_KIFICATION = prove
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC o SPEC `k:A->bool`)) THEN
   ASM_REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN
   MATCH_MP_TAC MONO_EXISTS THEN ASM SET_TAC[]);;
+
 
 let K_SPACE_KIFICATION = prove
  (`!top:A topology. k_space(kification top)`,
@@ -25006,6 +25034,7 @@ let SUBTOPOLOGY_KIFICATION_COMPACT = prove
   FIRST_X_ASSUM(MP_TAC o SPEC `k:A->bool`) THEN
   ASM_REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN
   MESON_TAC[INTER_COMM]);;
+
 
 let SUBTOPOLOGY_KIFICATION_FINER = prove
  (`!top (s:A->bool) u.
@@ -25068,6 +25097,7 @@ let K_SPACE_PERFECT_MAP_IMAGE_EQ = prove
   ASM_SIMP_TAC[PERFECT_MAP_FROM_KIFICATION] THEN
   SIMP_TAC[CONTINUOUS_MAP_FROM_KIFICATION; CONTINUOUS_MAP_ID] THEN
   ASM_SIMP_TAC[PERFECT_IMP_CONTINUOUS_MAP]);;
+
 
 
 (* ------------------------------------------------------------------------- *)
@@ -25955,6 +25985,7 @@ let HOMOTOPIC_WITH_IMP_CONTINUOUS_MAPS = prove
   REWRITE_TAC[IN_REAL_INTERVAL] THEN REAL_ARITH_TAC);;
 
 
+
 let HOMOTOPIC_WITH_IMP_PROPERTY = prove
  (`!P X Y f g:A->B. homotopic_with P (X,Y) f g ==> P f /\ P g`,
   REPEAT GEN_TAC THEN REWRITE_TAC[homotopic_with] THEN
@@ -26396,6 +26427,7 @@ let CONTRACTIBLE_SPACE_SING = prove
   ASM_REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
   SET_TAC[]);;
 
+
 let CONTRACTIBLE_SPACE_SUBSET_SING = prove
  (`!top a:A. topspace top SUBSET {a} ==> contractible_space top`,
   REWRITE_TAC[SET_RULE `s SUBSET {a} <=> s = {} \/ s = {a}`] THEN
@@ -26447,6 +26479,7 @@ let CONTRACTIBLE_IMP_CONNECTED_SPACE = prove
  (`!top:A topology. contractible_space top ==> connected_space top`,
   MESON_TAC[CONTRACTIBLE_IMP_PATH_CONNECTED_SPACE;
             PATH_CONNECTED_IMP_CONNECTED_SPACE]);;
+
 
 let CONTRACTIBLE_SPACE_ALT = prove
  (`!top:A topology.
@@ -26500,6 +26533,7 @@ let NULLHOMOTOPIC_FROM_CONTRACTIBLE_SPACE = prove
    [REWRITE_TAC[o_THM; FUN_EQ_THM];
     MATCH_MP_TAC NULLHOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE THEN
     EXISTS_TAC `top1:A topology` THEN ASM_REWRITE_TAC[CONTINUOUS_MAP_ID]]);;
+
 
 let HOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE = prove
  (`!(f:A->B) (g:B->C) f' g' top1 top2 top3.
@@ -26674,6 +26708,7 @@ let CONTRACTIBLE_SPACE_PRODUCT_TOPOLOGY = prove
         topspace (product_topology k tops) = {} \/
         !i. i IN k ==> contractible_space(tops i)`,
   REPEAT GEN_TAC THEN
+
   ASM_CASES_TAC `topspace(product_topology k (tops:K->A topology)) = {}` THEN
   ASM_SIMP_TAC[CONTRACTIBLE_SPACE_EMPTY] THEN EQ_TAC THENL
    [DISCH_TAC THEN X_GEN_TAC `i:K` THEN DISCH_TAC THEN
@@ -26784,6 +26819,7 @@ let COMPLETELY_METRIZABLE_SPACE_EUCLIDEANREAL = prove
   MATCH_MP_TAC COMPLETELY_METRIZABLE_SPACE_MTOPOLOGY THEN
   REWRITE_TAC[MCOMPLETE_REAL_EUCLIDEAN_METRIC]);;
 
+
 let COMPLETELY_METRIZABLE_SPACE_CLOSED_IN = prove
  (`!top s:A->bool.
         completely_metrizable_space top /\ closed_in top s
@@ -26859,6 +26895,7 @@ let HOMEOMORPHIC_COMPLETELY_METRIZABLE_SPACE = prove
       ASM SET_TAC[]]) in
   REPEAT STRIP_TAC THEN EQ_TAC THEN MATCH_MP_TAC lemma THEN
   ASM_MESON_TAC[HOMEOMORPHIC_SPACE_SYM]);;
+
 
 let COMPLETELY_METRIZABLE_SPACE_RETRACTION_MAP_IMAGE = prove
  (`!top top' (r:A->B).
@@ -26958,6 +26995,7 @@ let MCBALL_PROD_METRIC_SUBSET = prove
               CONJUNCT1 PROD_METRIC] THEN
   MESON_TAC[COMPONENT_LE_PROD_METRIC; REAL_LE_TRANS]);;
 
+
 let MBALL_SUBSET_PROD_METRIC = prove
  (`!m1 m2 x:A y:B r r'.
         mball m1 (x,r) CROSS mball m2 (y,r')
@@ -27047,6 +27085,7 @@ let METRIZABLE_SPACE_PROD_TOPOLOGY = prove
    [MATCH_MP_TAC PROD_TOPOLOGY_HOMEOMORPHIC_SPACE_LEFT;
     MATCH_MP_TAC PROD_TOPOLOGY_HOMEOMORPHIC_SPACE_RIGHT] THEN
   REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN ASM SET_TAC[]);;
+
 
 let CAUCHY_IN_PROD_METRIC = prove
  (`!m1 m2 x:num->A#B.
@@ -28905,6 +28944,7 @@ let CAUCHY_CONTINUOUS_MAP_EXTENDS_TO_CONTINUOUS_INTERMEDIATE_CLOSURE_OF = prove
   ASM_REWRITE_TAC[] THEN
   ASM_MESON_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY_MONO]);;
 
+
 let LIPSCHITZ_CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE = prove
  (`!m1 m2 f:A->B s t.
         s SUBSET t /\ t SUBSET (mtopology m1) closure_of s /\
@@ -29073,6 +29113,7 @@ let UNIFORMLY_CONTINUOUS_MAP_EXTENDS_TO_CLOSURE_OF = prove
          CAUCHY_CONTINUOUS_MAP_EXTENDS_TO_CONTINUOUS_CLOSURE_OF) THEN
   ASM_SIMP_TAC[UNIFORMLY_IMP_CAUCHY_CONTINUOUS_MAP] THEN
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g:A->B` THEN STRIP_TAC THEN
+
   ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC UNIFORMLY_CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE THEN
   EXISTS_TAC `mspace m1 INTER s:A->bool` THEN ASM_REWRITE_TAC[] THEN
@@ -29189,6 +29230,7 @@ let CAUCHY_CONTINUOUS_MAP_EXTENDS_TO_CLOSURE_OF = prove
   REWRITE_TAC[TOPSPACE_MTOPOLOGY; GSYM SUBMETRIC_RESTRICT] THEN
   MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_EQ THEN EXISTS_TAC `f:A->B` THEN
   ASM_SIMP_TAC[SUBMETRIC; IN_INTER]);;
+
 
 let CAUCHY_CONTINUOUS_MAP_EXTENDS_TO_INTERMEDIATE_CLOSURE_OF = prove
  (`!m1 m2 (f:A->B) s t.
@@ -29438,6 +29480,7 @@ let LAVRENTIEV_EXTENSION_GEN = prove
     SIMP_TAC[IN_INTER; IN_ELIM_THM; IN_DIFF] THEN
     ASM_SIMP_TAC[SUBSET_INTER; CLOSURE_OF_SUBSET]]);;
 
+
 let LAVRENTIEV_EXTENSION = prove
  (`!top s top' (f:A->B).
         s SUBSET topspace top /\
@@ -29526,6 +29569,7 @@ let CAUCHY_IN_CAPPED_METRIC = prove
    [ASM_MESON_TAC[capped_metric]; ALL_TAC] THEN
   ASM_REWRITE_TAC[cauchy_in; CAPPED_METRIC; REAL_MIN_LT] THEN
   ASM_MESON_TAC[REAL_ARITH `~(d < min d e)`; REAL_LT_MIN; REAL_NOT_LE]);;
+
 
 let MCOMPLETE_CAPPED_METRIC = prove
  (`!d (m:A metric). mcomplete(capped_metric d m) <=> mcomplete m`,
@@ -31726,7 +31770,9 @@ let BAIRE_CATEGORY = prove
   ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP OPEN_IN_SUBSET) THEN SET_TAC[]);;
 
+
 (* ------------------------------------------------------------------------- *)
+
 (* The Tychonoff embedding.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -32116,6 +32162,7 @@ let TIETZE_EXTENSION_COMPLETELY_REGULAR = prove
     REWRITE_TAC[CONTINUOUS_MAP_KOLMOGOROV_QUOTIENT]]);;
 
 (* ------------------------------------------------------------------------- *)
+
 (* Embedding in products and hence more about completely metrizable spaces.  *)
 
 (* ------------------------------------------------------------------------- *)

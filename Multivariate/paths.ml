@@ -11152,6 +11152,7 @@ let CLOSED_UNION_COMPLEMENT_COMPONENTS = prove
   MATCH_MP_TAC CLOSED_IN_UNION_COMPLEMENT_COMPONENTS THEN
   ASM_REWRITE_TAC[LOCALLY_CONNECTED_UNIV]);;
 
+
 let CLOSED_IN_UNION_COMPLEMENT_COMPONENT = prove
  (`!u s c:real^N->bool.
         locally connected u /\
@@ -11799,6 +11800,7 @@ let CONNECTED_IMP_WELLCHAINED = prove
   ASM_SIMP_TAC[OPEN_IN_OPEN_INTER; OPEN_BALL] THEN REWRITE_TAC[IN_BALL] THEN
   ASM_MESON_TAC[NORM_ARITH
    `dist(a:real^N,x) < e / &2 /\ dist(a,y) < e / &2 ==> dist(x,y) < e`]);;
+
 
 let CONNECTED_EQ_WELLCHAINED = prove
  (`!s:real^N->bool.
@@ -22760,6 +22762,8 @@ let CARD_EQ_COMPONENTS_IN_COMPACTIFICATION = prove
           COMPONENTS_MAXIMAL)) THEN
     MP_TAC(ISPEC `s:real^N->bool` CLOSURE_SUBSET) THEN ASM SET_TAC[]]);;
 
+
+
 let CONNECTED_COMPLEMENT_SUBSET_SIMPLE_PATH_IMAGE = prove
  (`!g s:real^N->bool.
         simple_path g /\ pathfinish g = pathstart g /\ s SUBSET path_image g
@@ -29986,6 +29990,7 @@ let HAS_SIZE_EQ_COMPONENTS_COMPLEMENTS = prove
    [RULE_ASSUM_TAC(REWRITE_RULE[homeomorphism]) THEN ASM SET_TAC[];
     ASM_REWRITE_TAC[]] THEN
   ANTS_TAC THENL
+
    [TRANS_TAC HOMEOMORPHIC_TRANS `s:real^N->bool` THEN CONJ_TAC THENL
      [ALL_TAC;
       TRANS_TAC HOMEOMORPHIC_TRANS `t:real^N->bool` THEN

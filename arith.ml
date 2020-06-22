@@ -1176,6 +1176,7 @@ let MOD_LT = prove
   REPEAT STRIP_TAC THEN MATCH_MP_TAC MOD_UNIQ THEN
   EXISTS_TAC `0` THEN ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES]);;
 
+
 let MOD_EQ_SELF = prove
  (`!m n. m MOD n = m <=> n = 0 \/ m < n`,
   MESON_TAC[MOD_ZERO; MOD_LT; DIVISION; LE_1]);;
@@ -1188,12 +1189,15 @@ let MOD_CASES = prove
    [REWRITE_TAC[MULT_CLAUSES] THEN ASM_MESON_TAC[SUB_ADD; ADD_SYM];
     ASM_MESON_TAC[LT_ADD_RCANCEL; SUB_ADD; MULT_2; LT_ADD2]]);;
 
+
 let MOD_ADD_CASES = prove
  (`!m n p.
         m < p /\ n < p
         ==> (m + n) MOD p = if m + n < p then m + n else (m + n) - p`,
+
   REPEAT STRIP_TAC THEN MATCH_MP_TAC MOD_CASES THEN
   REWRITE_TAC[MULT_2] THEN ASM_MESON_TAC[LT_ADD2]);;
+
 
 let MOD_EQ = prove
  (`!m n p q. m = n + q * p ==> m MOD p = n MOD p`,

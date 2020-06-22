@@ -206,10 +206,12 @@ let parse_pretype =
                          then s,rest else raise Noparse
     | _ -> raise Noparse in
   let rec pretype i =
+
     rightbin sumtype (a (Resword "->")) (btyop "fun") "proper use of type operator (->)" i
   and sumtype i = rightbin prodtype (a (Ident "+")) (btyop "sum") "proper use of type operator (+)" i
   and prodtype i = rightbin carttype (a (Ident "#")) (btyop "prod") "proper use of type operator (#)" i
   and carttype i = leftbin apptype (a (Ident "^")) (btyop "cart") "proper use of type operator (^)" i
+
   and apptype i = (atomictypes ++ (type_constructor >> (fun x -> [x])
                                 ||| nothing) >> mk_apptype) i
   and atomictypes i =

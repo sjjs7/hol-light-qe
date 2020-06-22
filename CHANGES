@@ -9,6 +9,7 @@
   * *****************************************************************
 
 
+
 Fri  1st Mar 2019       Library/floor.ml
 
 Added a simple theorem relating integer-valued reals and the integer type: 
@@ -217,6 +218,7 @@ Added one more trivial arithmetical theorem
   MOD_EQ_SELF = |- !m n. m MOD n = m <=> n = 0 \/ m < n
 
 MOD_EQ_SELF
+
 
 
 Sat  5th Jan 2019       arith.ml, basics.ml, cart.ml, parser.ml, printer.ml, Formal_ineqs/taylor/m_taylor.hl, Help/BITS_ELIM_CONV.doc [new file], Help/DIMINDEX_CONV.doc [new file], Help/DIMINDEX_TAC.doc [new file], Help/HAS_SIZE_DIMINDEX_RULE.doc [new file], Help/dest_finty.doc [new file], Help/mk_finty.doc [new file]
