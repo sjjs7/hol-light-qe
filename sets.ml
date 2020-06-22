@@ -2747,6 +2747,18 @@ let RESTRICTION_COMPOSE = prove
             RESTRICTION s (g o f)`,
   SIMP_TAC[RESTRICTION_COMPOSE_LEFT; RESTRICTION_COMPOSE_RIGHT]);;
 
+let RESTRICTION_UNIQUE = prove
+ (`!s (f:A->B) g.
+        RESTRICTION s f = g <=> EXTENSIONAL s g /\ !x. x IN s ==> f x = g x`,
+  REWRITE_TAC[FUN_EQ_THM; RESTRICTION; EXTENSIONAL; IN_ELIM_THM] THEN
+  MESON_TAC[]);;
+
+let RESTRICTION_UNIQUE_ALT = prove
+ (`!s (f:A->B) g.
+        f = RESTRICTION s g <=> EXTENSIONAL s f /\ !x. x IN s ==> f x = g x`,
+  REWRITE_TAC[FUN_EQ_THM; RESTRICTION; EXTENSIONAL; IN_ELIM_THM] THEN
+  MESON_TAC[]);;
+
 (* ------------------------------------------------------------------------- *)
 (* General Cartesian product / dependent function space.                     *)
 (* ------------------------------------------------------------------------- *)
@@ -2927,6 +2939,14 @@ let FORALL_CARTESIAN_PRODUCT_ELEMENTS_EQ = prove
         ==> ((!i x. i IN k /\ x IN s i ==> P i x) <=>
              !z i. z IN cartesian_product k s /\ i IN k ==> P i (z i))`,
   SIMP_TAC[FORALL_CARTESIAN_PRODUCT_ELEMENTS]);;
+
+let EXISTS_CARTESIAN_PRODUCT_ELEMENT = prove
+ (`!P k s:K->A->bool.
+        (?z. z IN cartesian_product k s /\ (!i. i IN k ==> P i (z i))) <=>
+        (!i. i IN k ==> ?x. x IN (s i) /\ P i x)`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[CARTESIAN_PRODUCT_AS_RESTRICTIONS; EXISTS_IN_GSPEC] THEN
+  SIMP_TAC[RESTRICTION] THEN MESON_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Product of a family of maps.                                              *)
