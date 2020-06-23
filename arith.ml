@@ -7,6 +7,7 @@
 (*              (c) Copyright, John Harrison 1998-2007                       *)
 (*                 (c) Copyright, Marco Maggesi 2015                         *)
 (*      (c) Copyright, Andrea Gabrielli, Marco Maggesi 2017-2018             *)
+(*                (c) Copyright, Mario Carneiro 2020                         *)
 (* ========================================================================= *)
 
 needs "recursion.ml";;
@@ -1369,6 +1370,11 @@ let DIV_EQ_0 = prove
     MATCH_MP_TAC DIV_UNIQ THEN EXISTS_TAC `m:num` THEN
     ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES]]);;
 
+let MOD_DIV_EQ_0 = prove
+ (`!m n. ~(n = 0) ==> (m MOD n) DIV n = 0`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN (fun th -> IMP_REWRITE_TAC [th; DIV_EQ_0; MOD_LT_EQ]));;
+
 let MOD_EQ_0 = prove
  (`!m n. (m MOD n = 0) <=> ?q. m = q * n`,
   REPEAT GEN_TAC THEN ASM_CASES_TAC `n = 0` THEN
@@ -1616,6 +1622,22 @@ let DIV_EXP,MOD_EXP = (CONJ_PAIR o prove)
   ASM_REWRITE_TAC[EXP_ONE; ADD_CLAUSES; MULT_CLAUSES; LT_EXP] THEN
   REWRITE_TAC[LT; GSYM NOT_LT; ONE; TWO] THEN
   ASM_REWRITE_TAC[SYM ONE; GSYM NOT_LE]);;
+
+let FORALL_LT_MOD_THM = prove
+ (`!P n. (!a. a < n ==> P a) <=> n = 0 \/ !a. P(a MOD n)`,
+  MESON_TAC[LT; MOD_EQ_SELF; MOD_LT_EQ]);;
+
+let FORALL_MOD_THM = prove
+ (`!P n. ~(n = 0) ==> ((!a. P(a MOD n)) <=> (!a. a < n ==> P a))`,
+  SIMP_TAC[FORALL_LT_MOD_THM]);;
+
+let EXISTS_LT_MOD_THM = prove
+ (`!P n. (?a. a < n /\ P a) <=> ~(n = 0) /\ ?a. P(a MOD n)`,
+  MESON_TAC[LT; MOD_EQ_SELF; MOD_LT_EQ]);;
+
+let EXISTS_MOD_THM = prove
+ (`!P n. ~(n = 0) ==> ((?a. P(a MOD n)) <=> (?a. a < n /\ P a))`,
+  SIMP_TAC[EXISTS_LT_MOD_THM]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems for eliminating cutoff subtraction, predecessor, DIV and MOD.    *)

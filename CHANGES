@@ -8,6 +8,461 @@
   * page: https://github.com/jrh13/hol-light/commits/master         *
   * *****************************************************************
 
+Sat 23rd May 2020       Examples/pseudoprime.ml [new file]
+
+Added a file about three additional concepts of "pseudoprime", in addition to
+the Miller-Rabin or strong pseudoprime material in "Examples/miller_rabin.ml".
+Together these two files now define four different concepts of pseudoprime. The
+phrase "Euler pseudoprime" can be used for either of the middle ones; this
+terminology is chosen in an attempt to be less ambiguous.
+
+        fermat_pseudoprime
+        weak_euler_pseudoprime
+        euler_jacobi_pseudoprime
+        miller_rabin_pseudoprime
+
+This file proves all the standard implications and equivalences between the
+concepts, density bounds for composites with or without exceptions etc., as
+well as some auxiliary results about Carmichael numbers (defined as
+"carmichael_number").
+
+Fri 22nd May 2020       int.ml, Library/products.ml, Library/integer.ml, Library/jacobi.ml
+
+Added a few miscellaneous arithmetical lemmas
+
+  DIVIDES_DIVIDES_DIV_IMP =
+    |- !n d e. d * e divides n ==> e divides n DIV d
+  
+  EXP_NSUM =
+    |- !m n s. FINITE s ==> m EXP nsum s n = nproduct s (\i. m EXP n i)
+  
+  INT_CONG_MUL_1 =
+    |- !n x y. (x == &1) (mod n) /\ (y == &1) (mod n) ==> (x * y == &1) (mod n)
+  
+  INT_CONG_POW_1 =
+    |- !a k n. (a == &1) (mod n) ==> (a pow k == &1) (mod n)
+  
+  INT_POW_NSUM =
+    |- !x n s. FINITE s ==> x pow nsum s n = iproduct s (\i. x pow n i)
+  
+  JACOBI_NPRODUCT_LEFT =
+    |- !a n k.
+           FINITE k
+           ==> jacobi (nproduct k a,n) = iproduct k (\i. jacobi (a i,n))
+  
+  JACOBI_NPRODUCT_RIGHT =
+    |- !a n k.
+           FINITE k
+           ==> jacobi (a,nproduct k n) = iproduct k (\i. jacobi (a,n i))
+  
+  REAL_POW_NSUM =
+    |- !x n s. FINITE s ==> x pow nsum s n = product s (\i. x pow n i)
+  
+Thu 21st May 2020       Examples/miller_rabin.ml
+
+As a prelude to introducing a first-class definition of "Fermat pseudoprime",
+renamed two existing theorems:
+
+  MILLER_RABIN_IMP_FERMAT_PSEUDOPRIME ->
+    MILLER_RABIN_IMP_FERMAT_PSEUDOPRIME_EXPLICIT
+
+  MILLER_RABIN_EQ_FERMAT_PSEUDOPRIME ->
+    MILLER_RABIN_EQ_FERMAT_PSEUDOPRIME_EXPLICIT
+
+and added the following, which is an easy consequence of the bound theorems but
+worth calling out explicitly:
+
+  ABSOLUTE_MILLER_RABIN_PSEUDOPRIME =
+    |- !n. (!a. coprime (a,n) ==> miller_rabin_pseudoprime a n) <=>
+         n = 1 \/ prime n
+
+Wed 20th May 2020       Library/pocklington.ml
+
+Added a couple more natural lemmas about congruences modulo squarefree numbers:
+
+  CONG_MOD_SQUAREFREE =
+    |- !n a b.
+           squarefree n /\ (!p. prime p /\ p divides n ==> (a == b) (mod p))
+           ==> (a == b) (mod n)
+
+  CONG_MOD_SQUAREFREE_EQ =
+    |- !n a b.
+           squarefree n
+           ==> ((a == b) (mod n) <=>
+                (!p. prime p /\ p divides n ==> (a == b) (mod p)))
+
+Fri 15th May 2020       Library/pocklington.ml, Library/primitive.ml
+
+Added theorems about injectivity and surjectivity of powers modulo an integer,
+which can actually be considered as special cases (for the multiplicative group
+of integers) of the group powering theorems added yesterday. Indeed
+PRIME_DIVISOR_ORDER_EXISTS is in effect the special case of Cauchy's theorem in
+group theory for the case of multiplicative groups of integers, but we maintain
+the policy of keeping the two settings independent until brought together in
+"Library/modmul_group.ml".
+
+  INJECTIVE_EXP_MODULO =
+    |- !n a b k.
+           coprime(k,phi n) /\
+           coprime(n,a) /\
+           coprime(n,b) /\
+           (a EXP k == b EXP k) (mod n)
+           ==> (a == b) (mod n)
+
+  INJECTIVE_EXP_MODULO_EQ =
+    |- !n k.
+           ~(n = 0)
+           ==> ((!a b.
+                     coprime(n,a) /\
+                     coprime(n,b) /\
+                     (a EXP k == b EXP k) (mod n)
+                     ==> (a == b) (mod n)) <=>
+                coprime(k,phi n))
+
+  POWER_RESIDUE_MODULO_COPRIME =
+    |- !n a k.
+           coprime(n,a) /\ coprime(k,phi n) ==> (?x. (x EXP k == a) (mod n))
+
+  POWER_RESIDUE_MODULO_EQ =
+    |- !n k.
+           ~(n = 0)
+           ==> ((!a. coprime(n,a) ==> (?x. (x EXP k == a) (mod n))) <=>
+                coprime(k,phi n))
+
+  POWER_RESIDUE_MODULO_EQ_ALT =
+    |- !n k.
+           ~(n = 0)
+           ==> ((!a. coprime(n,a)
+                     ==> (?x. coprime(n,x) /\ (x EXP k == a) (mod n))) <=>
+                coprime(k,phi n))
+
+  POWER_RESIDUE_MODULO_PRIME =
+    |- !p a k.
+           prime p /\ ~(p divides a) /\ coprime(k,p - 1)
+           ==> (?x. (x EXP k == a) (mod p))
+
+  PRIME_DIVISOR_ORDER_EXISTS =
+    |- !n p. ~(n = 0) /\ prime p /\ p divides phi n ==> (?x. order n x = p)
+
+Thu 14th May 2020       Library/grouptheory.ml
+
+Added a number of theorems around injectivity and surjectivity of the n'th
+power function in finite groups (including the easier special case of
+n = -1, inversion). For example FINITE_GROUP_POW_INJECTIVE_EQ which says that
+the "n'th power" function is injective in a finite group iff n is coprime to
+|G|.
+
+  ABELIAN_GROUP_EPIMORPHISM_INVERSION =
+    |- !G. group_epimorphism (G,G) (group_inv G) <=> abelian_group G
+
+  ABELIAN_GROUP_EPIMORPHISM_POWERING =
+    |- !G n.
+           abelian_group G /\
+           FINITE(group_carrier G) /\
+           coprime(n,CARD(group_carrier G))
+           ==> group_epimorphism (G,G) (\x. group_pow G x n)
+
+  ABELIAN_GROUP_EPIMORPHISM_POWERING_EQ =
+    |- !G n.
+           abelian_group G /\ FINITE(group_carrier G)
+           ==> (group_epimorphism (G,G) (\x. group_pow G x n) <=>
+                coprime(n,CARD(group_carrier G)))
+
+  ABELIAN_GROUP_HOMOMORPHISM_INVERSION =
+    |- !G. group_homomorphism (G,G) (group_inv G) <=> abelian_group G
+
+  ABELIAN_GROUP_ISOMORPHISMS_INVERSION =
+    |- !G. group_isomorphisms (G,G) (group_inv G,group_inv G) <=>
+           abelian_group G
+
+  ABELIAN_GROUP_ISOMORPHISM_INVERSION =
+    |- !G. group_isomorphism (G,G) (group_inv G) <=> abelian_group G
+
+  ABELIAN_GROUP_ISOMORPHISM_POWERING =
+    |- !G n.
+           abelian_group G /\
+           FINITE(group_carrier G) /\
+           coprime(n,CARD(group_carrier G))
+           ==> group_isomorphism (G,G) (\x. group_pow G x n)
+
+  ABELIAN_GROUP_ISOMORPHISM_POWERING_EQ =
+    |- !G n.
+           abelian_group G /\ FINITE(group_carrier G)
+           ==> (group_isomorphism (G,G) (\x. group_pow G x n) <=>
+                coprime(n,CARD(group_carrier G)))
+
+  ABELIAN_GROUP_MONOMORPHISM_INVERSION =
+    |- !G. group_monomorphism (G,G) (group_inv G) <=> abelian_group G
+
+  ABELIAN_GROUP_MONOMORPHISM_POWERING =
+    |- !G n.
+           abelian_group G /\
+           FINITE(group_carrier G) /\
+           coprime(n,CARD(group_carrier G))
+           ==> group_monomorphism (G,G) (\x. group_pow G x n)
+
+  ABELIAN_GROUP_MONOMORPHISM_POWERING_EQ =
+    |- !G n.
+           abelian_group G /\ FINITE(group_carrier G)
+           ==> (group_monomorphism (G,G) (\x. group_pow G x n) <=>
+                coprime(n,CARD(group_carrier G)))
+
+  FINITE_GROUP_POW_INJECTIVE_EQ =
+    |- !G n.
+           FINITE(group_carrier G)
+           ==> ((!x y.
+                     x IN group_carrier G /\
+                     y IN group_carrier G /\
+                     group_pow G x n = group_pow G y n
+                     ==> x = y) <=>
+                coprime(n,CARD(group_carrier G)))
+
+  FINITE_GROUP_POW_SURJECTIVE_EQ =
+    |- !G n.
+           FINITE(group_carrier G)
+           ==> ((!x. x IN group_carrier G
+                     ==> (?y. y IN group_carrier G /\ group_pow G y n = x)) <=>
+                coprime(n,CARD(group_carrier G)))
+
+  FINITE_GROUP_ROOT_EXISTS =
+    |- !G n x.
+           FINITE(group_carrier G) /\
+           coprime(n,CARD(group_carrier G)) /\
+           x IN group_carrier G
+           ==> (?y. y IN group_carrier G /\ group_pow G y n = x)
+
+  FINITE_GROUP_ZPOW_INJECTIVE_EQ =
+    |- !G n.
+           FINITE(group_carrier G)
+           ==> ((!x y.
+                     x IN group_carrier G /\
+                     y IN group_carrier G /\
+                     group_zpow G x n = group_zpow G y n
+                     ==> x = y) <=>
+                coprime(n,&(CARD(group_carrier G))))
+
+  FINITE_GROUP_ZPOW_SURJECTIVE_EQ =
+    |- !G n.
+           FINITE(group_carrier G)
+           ==> ((!x. x IN group_carrier G
+                     ==> (?y. y IN group_carrier G /\ group_zpow G y n = x)) <=>
+                coprime(n,&(CARD(group_carrier G))))
+
+  FINITE_GROUP_ZROOT_EXISTS =
+    |- !G n x.
+           FINITE(group_carrier G) /\
+           coprime(n,&(CARD(group_carrier G))) /\
+           x IN group_carrier G
+           ==> (?y. y IN group_carrier G /\ group_zpow G y n = x)
+
+  GROUP_INV_EQ =
+    |- !G x y.
+           x IN group_carrier G /\ y IN group_carrier G
+           ==> (group_inv G x = group_inv G y <=> x = y)
+
+  GROUP_POW_CANCEL =
+    |- !G n x y.
+           FINITE(group_carrier G) /\
+           coprime(n,CARD(group_carrier G)) /\
+           x IN group_carrier G /\
+           y IN group_carrier G /\
+           group_pow G x n = group_pow G y n
+           ==> x = y
+
+  GROUP_ZPOW_CANCEL =
+    |- !G n x y.
+           FINITE(group_carrier G) /\
+           coprime(n,&(CARD(group_carrier G))) /\
+           x IN group_carrier G /\
+           y IN group_carrier G /\
+           group_zpow G x n = group_zpow G y n
+           ==> x = y
+
+Thu 14th May 2020       Library/grouptheory.ml
+
+Fixed a trivial error where GROUP_ISOMORPHISM_EQ_EPIMORPHISM_FINITE was
+in fact a duplicate of GROUP_ISOMORPHISM_EQ_MONOMORPHISM_FINITE, not proving
+what it was supposed to prove. Now:
+
+  GROUP_ISOMORPHISM_EQ_EPIMORPHISM_FINITE
+    |- !G H f.
+         FINITE (group_carrier G) /\
+         FINITE (group_carrier H) /\
+         CARD(group_carrier G) = CARD(group_carrier H)
+         ==> (group_isomorphism (G,H) f <=> group_epimorphism (G,H) f)
+
+Wed 13th May 2020       arith.ml, Library/prime.ml
+
+Added a few simple but nice rewrites to map between bounded quantifiers
+are "modularized" ones:
+
+  EXISTS_LT_MOD_THM =
+    |- !P n. (?a. a < n /\ P a) <=> ~(n = 0) /\ (?a. P (a MOD n))
+
+  EXISTS_MOD_THM =
+    |- !P n. ~(n = 0) ==> ((?a. P (a MOD n)) <=> (?a. a < n /\ P a))
+
+  FORALL_LT_MOD_THM =
+    |- !P n. (!a. a < n ==> P a) <=> n = 0 \/ (!a. P (a MOD n))
+
+  FORALL_MOD_THM =
+    |- !P n. ~(n = 0) ==> ((!a. P (a MOD n)) <=> (!a. a < n ==> P a))
+
+and some "if and only if" variants of cancellability in congruences
+asserting that it is actually equivalent to coprimality:
+
+  CONG_MULT_LCANCEL_IFF =
+    |- !a n.
+           ~(n = 0)
+           ==> ((!x y. (a * x == a * y) (mod n) ==> (x == y) (mod n)) <=>
+                coprime(a,n))
+
+  CONG_MULT_RCANCEL_IFF =
+    |- !a n.
+           ~(n = 0)
+           ==> ((!x y. (x * a == y * a) (mod n) ==> (x == y) (mod n)) <=>
+                coprime(a,n))
+
+  COPRIME_DIVPROD_IFF =
+    |- !d a.
+           ~(d = 0)
+           ==> ((!b. d divides a * b ==> d divides b) <=> coprime(d,a))
+
+Tue 12th May 2020       Library/pocklington.ml, Library/multiplicative.ml
+
+Added three more natural lemmas about "squarefree" (the last one indeed
+being another characterization of it):
+
+  SQUAREFREE_DECOMPOSITION =
+    |- !n. ?m r. squarefree m /\ m * r EXP 2 = n
+
+  SQUAREFREE_EXPAND =
+    |- !n. squarefree n ==> nproduct {p | prime p /\ p divides n} (\p. p) = n
+
+  SQUAREFREE_EXPAND_EQ =
+    |- !n. squarefree n <=>
+           ~(n = 0) /\ nproduct {p | prime p /\ p divides n} (\p. p) = n
+
+and also changed the definition of the Moebius function "mobius" in
+"Library/multiplicative.ml" to use the concept "squarefree" explicitly,
+streamlining some proofs in the process. Kept the former "expanded"
+definition as a new theorem:
+
+  MOBIUS_ALT =
+    |- !n. mobius n =
+           if ?p. prime p /\ p EXP 2 divides n then &0
+           else -- &1 pow CARD {p | prime p /\ p divides n}
+
+Mon 11th May 2020       Library/prime.ml
+
+Added two versions of prime factorization with "bare hands" proofs, not even
+assuming trivial lemmas about "nproduct". It seemed silly that previously one
+had to get this very basic fact by expanding MULTIPLICATIVE_ID and so pulling
+in additional dependencies.
+
+  PRIME_FACTORIZATION =
+    |- !n. ~(n = 0)
+           ==> nproduct {p | prime p /\ p divides n} (\p. p EXP index p n) = n
+
+  PRIME_FACTORIZATION_ALT =
+    |- !n. ~(n = 0) ==> nproduct {p | prime p} (\p. p EXP index p n) = n
+
+Sat  9th May 2020       Library/bitmatch.ml [new file]
+
+Added a new library from Mario Carneiro supporting "bit matches" of the kind
+often found in machine instruction decoding where words are decomposed into
+bitfields for casewise matching. This not only supports parsing and printing
+of such expressions with intuitive syntax
+
+ `bitmatch w:int32 with
+    [sf; op; S; 0b100010:6; sh; imm12:12; Rn:5; Rd:5] -> Rn
+  | [sf; op; S; 0b01011000:8; Rm:5; 0:6; Rn:5; Rd:5] -> Rn`;;
+
+but also provides efficient proof tools for manipulating such expressions, e.g.
+bm_seq_numeral
+
+ # bm_seq_numeral
+   `bitmatch w:byte with
+      [hi3:3; 0b00:2; lo3:3] -> foo hi3 lo3
+    | [hi3:3; 0b1:1; lo4:4]  -> bar hi3 lo4
+    | [0b1010101:7; b]       -> baz b`
+    (Int 17);;
+
+ val it : term * thm =
+  (`word 17`,
+   |- (bitmatch word 17 with
+        [hi3:3; 0:2; lo3:3] -> foo hi3 lo3
+      | [hi3:3; 1:1; lo4:4] -> bar hi3 lo4
+      | [85:7; b] -> baz b) =
+      bar (word 0) (word 1))
+
+and BITMATCH_SEQ_CONV:
+
+ # BITMATCH_SEQ_CONV
+    `bitmatch (word 289406645 :int32) with
+       [sf; op; S; 0b100010:6; sh; imm12:12; Rn:5; Rd:5] -> Rn
+     | [sf; op; S; 0b01011000:8; Rm:5; 0:6; Rn:5; Rd:5] -> Rn`;;
+
+  val it : thm =
+  |- (bitmatch word 289406645 with
+       [sf; op; S; 34:6; sh; imm12:12; Rn:5; Rd:5] -> Rn
+     | [sf; op; S; 88:8; Rm:5; 0:6; Rn:5; Rd:5] -> Rn) =
+     word 21
+
+Sat  9th May 2020       Library/words.ml
+
+Added two new tranches of material for word-like computation with natural
+numbers, all from Mario Carneiro. They are installed in the machine words
+theory since that is the intended application domain, but they are in fact
+largely separate from the actual type. The new material  includes two new
+constants "numbit" (analogous to "bit" but over :num not :N word) and
+"num_shift_add" (for decomposing numerals along powers of 2):
+
+  numbit =
+    |- !n i. numbit i n <=> ODD(n DIV 2 EXP i)
+
+  num_shift_add =
+    |- !a b n. num_shift_add a b n = a MOD 2 EXP n + b * 2 EXP n
+
+together with additional lemmas:
+
+  num_shift_add_0 =
+    |- num_shift_add a b 0 = b
+
+  num_shift_add_SUC =
+    |- num_shift_add (BIT0 a) b (SUC n) = BIT0 (num_shift_add a b n) /\
+       num_shift_add (BIT1 a) b (SUC n) = BIT1 (num_shift_add a b n)
+
+  num_shift_add_lt =
+    |- !a b n i. b < 2 EXP i ==> num_shift_add a b n < 2 EXP (i + n)
+
+  num_shift_add_mod =
+    |- num_shift_add a (b MOD 2 EXP i) n =
+       num_shift_add a b n MOD 2 EXP (i + n)
+
+and supporting proof tools
+
+  BIT_PRED
+  NUMBIT_CONV
+  NUM_SHIFT_ADD_CORE
+  NUM_SHIFT_ADD_CONV
+
+Sat  9th May 2020       arith.ml, calc_num.ml
+
+Added a few more simple handy lemmas (from Mario Carneiro)
+
+  BIT0_0 =
+    |- BIT0 0 = 0
+
+  BIT1_0 =
+    |- BIT1 0 = 1
+
+  EXP_2_NE_0 =
+    |- !n. ~(2 EXP n = 0)
+
+  MOD_DIV_EQ_0 =
+    |- !m n. ~(n = 0) ==> (m MOD n) DIV n = 0
+
 Sat 18th Apr 2020       Library/grouptheory.ml
 
 Added a number of new group theory results, some plugging routine
@@ -19,51 +474,51 @@ like the Frattini argument (PGROUP_FRATTINI):
            h subgroup_of G
            ==> {left_coset G x h | x | x IN group_carrier G} =_c
                {right_coset G h x | x | x IN group_carrier G}
-  
+
   COUNT_FINITE_CYCLIC_GROUP_SUBGROUPS_ALL =
     |- !G. FINITE (group_carrier G) /\ cyclic_group G
            ==> CARD {h | h subgroup_of G} =
                CARD {d | d divides CARD (group_carrier G)}
-  
+
   GROUP_CENTRALIZER_SUBGROUP_GENERATED =
     |- !G h s.
            s SUBSET h /\ h subgroup_of G
            ==> group_centralizer (subgroup_generated G h) s =
                h INTER group_centralizer G s
-  
+
   GROUP_NORMALIZER_SUBGROUP_GENERATED =
     |- !G h s.
            s SUBSET h /\ h subgroup_of G
            ==> group_normalizer (subgroup_generated G h) s =
                h INTER group_normalizer G s
-  
-  GROUP_SETINV_AS_IMAGE = 
+
+  GROUP_SETINV_AS_IMAGE =
     |- !G. group_setinv G = IMAGE (group_inv G)
-  
+
   GROUP_SETINV_LEFT_COSET_GEN =
     |- !G h a.
            h subgroup_of G /\ a IN group_carrier G
            ==> group_setinv G (left_coset G a h) =
                right_coset G h (group_inv G a)
-  
+
   GROUP_SETINV_RIGHT_COSET_GEN =
     |- !G h a.
            h subgroup_of G /\ a IN group_carrier G
            ==> group_setinv G (right_coset G h a) =
                left_coset G (group_inv G a) h
-  
+
   LAGRANGE_THEOREM_LEFT_DIV =
     |- !G h.
            FINITE (group_carrier G) /\ h subgroup_of G
            ==> CARD {left_coset G x h | x | x IN group_carrier G} =
                CARD (group_carrier G) DIV CARD h
-  
+
   LAGRANGE_THEOREM_RIGHT_DIV =
     |- !G h.
            FINITE (group_carrier G) /\ h subgroup_of G
            ==> CARD {right_coset G h x | x | x IN group_carrier G} =
                CARD (group_carrier G) DIV CARD h
-  
+
   PGROUP_DIVIDES_NORMALIZER_QUOTIENT =
     |- !G p k h.
            FINITE (group_carrier G) /\
@@ -72,7 +527,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            CARD h = p EXP k /\
            p divides CARD (group_carrier G) DIV CARD h
            ==> p divides CARD (group_normalizer G h) DIV CARD h
-  
+
   PGROUP_FRATTINI =
     |- !G p k h j.
            prime p /\
@@ -83,7 +538,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            index p (CARD j) = k /\
            CARD h = p EXP k
            ==> group_setmul G (group_normalizer G h) j = group_carrier G
-  
+
   PGROUP_GEN =
     |- !G Q.
            FINITE (group_carrier G)
@@ -93,7 +548,7 @@ like the Frattini argument (PGROUP_FRATTINI):
                      p divides group_element_order G x
                      ==> Q p) <=>
                 (!p. prime p /\ p divides CARD (group_carrier G) ==> Q p))
-  
+
   PGROUP_MAXIMAL_NORMAL_SUBGROUP_OF =
     |- !G p k h.
            FINITE (group_carrier G) /\
@@ -102,12 +557,12 @@ like the Frattini argument (PGROUP_FRATTINI):
            h subgroup_of G /\
            (!h'. h' subgroup_of G /\ h PSUBSET h' ==> h' = group_carrier G)
            ==> h normal_subgroup_of G
-  
+
   PGROUP_NONTRIVIAL_CENTRE =
     |- !G p k.
            prime p /\ ~(k = 0) /\ group_carrier G HAS_SIZE p EXP k
            ==> {group_id G} PSUBSET group_centralizer G (group_carrier G)
-  
+
   PGROUP_NONTRIVIAL_CENTRE_GEN =
     |- !G n p k.
            prime p /\
@@ -116,7 +571,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            ~(n = {group_id G})
            ==> {group_id G} PSUBSET
                group_centralizer G (group_carrier G) INTER n
-  
+
   PGROUP_NORMALIZER_NORMALIZER =
     |- !G p k h.
            FINITE (group_carrier G) /\
@@ -125,7 +580,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            h subgroup_of G /\
            CARD h = p EXP k
            ==> group_normalizer G (group_normalizer G h) = group_normalizer G h
-  
+
   PGROUP_SELF_NORMALIZER =
     |- !G p k s h.
            FINITE (group_carrier G) /\
@@ -136,7 +591,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            h subgroup_of G /\
            group_normalizer G s SUBSET h
            ==> group_normalizer G h = h
-  
+
   PGROUP_SUBGROUP_PSUBSET_NORMALIZER =
     |- !G p k h.
            FINITE (group_carrier G) /\
@@ -145,7 +600,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            h subgroup_of G /\
            ~(h = group_carrier G)
            ==> h PSUBSET group_normalizer G h
-  
+
   SYLOW_THEOREM_NORMAL_UNIQUE =
     |- !G p k h h'.
            FINITE (group_carrier G) /\
@@ -154,7 +609,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            h normal_subgroup_of G /\
            CARD h = p EXP k
            ==> (h' subgroup_of G /\ CARD h' = p EXP k <=> h' = h)
-  
+
   SYLOW_THEOREM_NORMAL_UNIQUE_EQ =
     |- !G p k h.
            FINITE (group_carrier G) /\
@@ -164,7 +619,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            CARD h = p EXP k
            ==> ((!h'. h' subgroup_of G /\ CARD h' = p EXP k <=> h' = h) <=>
                 h normal_subgroup_of G)
-  
+
   SYLOW_THEOREM_PGROUP_SUPERSET =
     |- !G p k h.
            FINITE (group_carrier G) /\
@@ -174,7 +629,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            ==> (?h'. h' subgroup_of G /\
                      h SUBSET h' /\
                      CARD h' = p EXP index p (CARD (group_carrier G)))
-  
+
   SYLOW_THEOREM_UNIQUE =
     |- !G p k.
            FINITE (group_carrier G) /\
@@ -182,7 +637,7 @@ like the Frattini argument (PGROUP_FRATTINI):
            index p (CARD (group_carrier G)) = k
            ==> ((?!h. h subgroup_of G /\ CARD h = p EXP k) <=>
                 (?h. h normal_subgroup_of G /\ CARD h = p EXP k))
-  
+
 Thu 16th Apr 2020       Library/card.ml
 
 Added a few natural lemmas about cardinal comparison and preimages:
