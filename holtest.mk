@@ -26,13 +26,16 @@ STANDALONE_EXAMPLES:=\
 	Examples/inverse_bug_puzzle_tac \
 	RichterHilbertAxiomGeometry/inverse_bug_puzzle_read \
 	Library/isum \
+	Library/jacobi \
 	Examples/kb \
 	Examples/lagrange_lemma \
 	Examples/lucas_lehmer \
 	Examples/mangoldt \
 	Examples/mccarthy \
+	Examples/miller_rabin \
 	Examples/misiurewicz \
 	Examples/mizar \
+	Library/modmul_group \
 	Library/multiplicative \
 	Examples/multiwf \
 	Examples/padics \
@@ -44,6 +47,8 @@ STANDALONE_EXAMPLES:=\
 	Examples/prover9 \
 	Library/q \
 	Examples/rectypes \
+	Library/ringtheory \
+	Examples/safetyliveness \
 	Examples/schnirelmann \
 	Examples/solovay \
 	Examples/sos \
@@ -51,6 +56,8 @@ STANDALONE_EXAMPLES:=\
 	Examples/sylvester_gallai \
 	Examples/vitali \
 	Library/wo \
+	Library/words \
+	Examples/zolotarev \
 	Library/analysis-transc \
 	Library/prime-pratt \
 	Library/prime-pocklington \
@@ -64,6 +71,7 @@ EXTENDED_EXAMPLES:=\
 	IEEE/make \
 	IsabelleLight/make \
 	Jordan/make \
+	Logic/make \
 	Mizarlight/make \
 	miz3/make-test \
 	Minisat/make-taut \
