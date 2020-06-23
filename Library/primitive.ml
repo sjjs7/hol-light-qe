@@ -61,7 +61,7 @@ let INT_POLY_DIFF_EXPLICIT = INT_OF_REAL_THM REAL_POLY_DIFF_EXPLICIT;;
 
 let FINITE_INTSEG_RESTRICT = prove
  (`!P a b. FINITE {x:int | a <= x /\ x <= b /\ P x}`,
-  SIMP_TAC[FINITE_RESTRICT; FINITE_INTSEG; SET_RULE
+  SIMP_TAC[FINITE_RESTRICT; FINITE_INT_SEG; SET_RULE
    `{x | P x /\ Q x /\ R x} = {x | x IN {x | P x /\ Q x} /\ R x}`]);;
 
 let INT_POLY_LAGRANGE = prove
@@ -485,8 +485,7 @@ let PRIMITIVE_ROOT_MODULO_PRIMEPOW = prove
       ASM_SIMP_TAC[EXP_EQ_0; ARITH_RULE `3 <= p ==> ~(p = 0)`]];
     MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC `order (p EXP k) x` THEN
     CONJ_TAC THENL [ALL_TAC; ASM_REWRITE_TAC[]] THEN
-    MATCH_MP_TAC ORDER_CONG THEN MATCH_MP_TAC CONG_MOD THEN
-    ASM_SIMP_TAC[EXP_EQ_0; ARITH_RULE `3 <= p ==> ~(p = 0)`]]);;
+    MATCH_MP_TAC ORDER_CONG THEN REWRITE_TAC[CONG_MOD]]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Double prime powers and the other remaining positive cases 2 and 4.       *)

@@ -11,6 +11,7 @@ STANDALONE_EXAMPLES:=\
 	Examples/cong \
 	Examples/cooper \
 	Examples/dickson \
+	Examples/digit_serial_methods \
 	Examples/division_algebras \
 	Examples/dlo \
 	Library/floor \
@@ -34,6 +35,7 @@ STANDALONE_EXAMPLES:=\
 	Examples/mizar \
 	Library/multiplicative \
 	Examples/multiwf \
+	Examples/padics \
 	Examples/pell \
 	Library/permutations \
 	Library/primitive \
@@ -58,6 +60,7 @@ EXTENDED_EXAMPLES:=\
 	Arithmetic/make \
 	Boyer_Moore/make \
 	Complex/make \
+	Geometric_Algebra/make \
 	IEEE/make \
 	IsabelleLight/make \
 	Jordan/make \
@@ -82,6 +85,8 @@ EXTENDED_EXAMPLES:=\
 	Multivariate/geom \
 	Multivariate/homology \
 	Multivariate/lpspaces \
+	Multivariate/msum \
+	Multivariate/specialtopologies \
 	Multivariate/tarski \
 	RichterHilbertAxiomGeometry/Topology \
 	RichterHilbertAxiomGeometry/TarskiAxiomGeometry_read \

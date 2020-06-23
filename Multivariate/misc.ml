@@ -68,6 +68,21 @@ let REAL_HALF = prove
    (!e. &2 * (e / &2) = e)`,
   REAL_ARITH_TAC);;
 
+let ABS_SQUARE_LT_1 = prove
+ (`!x. x pow 2 < &1 <=> abs(x) < &1`,
+  ONCE_REWRITE_TAC[GSYM REAL_ABS_NUM] THEN
+  REWRITE_TAC[REAL_LT_SQUARE_ABS] THEN REAL_ARITH_TAC);;
+
+let ABS_SQUARE_LE_1 = prove
+ (`!x. x pow 2 <= &1 <=> abs(x) <= &1`,
+  ONCE_REWRITE_TAC[GSYM REAL_ABS_NUM] THEN
+  REWRITE_TAC[REAL_LT_SQUARE_ABS; GSYM REAL_NOT_LT] THEN REAL_ARITH_TAC);;
+
+let ABS_SQUARE_EQ_1 = prove
+ (`!x. x pow 2 = &1 <=> abs(x) = &1`,
+  REWRITE_TAC[REAL_RING `x pow 2 = &1 <=> x = &1 \/ x = -- &1`] THEN
+  REAL_ARITH_TAC);;
+
 let UPPER_BOUND_FINITE_SET = prove
  (`!f:(A->num) s. FINITE(s) ==> ?a. !x. x IN s ==> f(x) <= a`,
   GEN_TAC THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
@@ -256,6 +271,44 @@ let EPSILON_DELTA_MINIMAL = prove
       FIRST_X_ASSUM MATCH_MP_TAC THEN
       EXISTS_TAC `(d:A->real) a` THEN ASM_SIMP_TAC[]]]);;
 
+let HAS_SIZE_1_EXISTS = prove
+ (`!s. s HAS_SIZE 1 <=> ?!x. x IN s`,
+  REPEAT GEN_TAC THEN CONV_TAC(LAND_CONV HAS_SIZE_CONV) THEN
+  REWRITE_TAC[EXTENSION; IN_SING] THEN MESON_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Characterizations of solvability of small systems of equations.           *)
+(* ------------------------------------------------------------------------- *)
+
+let LINEAR_EQUATIONS_1_EQ  = prove
+ (`!a b. (?x. a * x = b) <=> a = &0 ==> b = &0`,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [CONV_TAC REAL_RING; ALL_TAC] THEN
+  ASM_CASES_TAC `b = &0` THEN
+  ASM_SIMP_TAC[REAL_FIELD `~(a = &0) ==> (a * x = b <=> x = b / a)`] THEN
+  MESON_TAC[REAL_MUL_RZERO]);;
+
+let LINEAR_EQUATIONS_2_EQ = prove
+ (`!a b c d u v.
+        (?x y. a * x + b * y = u /\ c * x + d * y = v) <=>
+        (a * d = b * c ==> d * u = b * v /\ c * u = a * v) /\
+        (a = &0 /\ b = &0 /\ c = &0 /\ d = &0 ==> u = &0 /\ v = &0)`,
+  REPEAT GEN_TAC THEN EQ_TAC THENL [CONV_TAC REAL_RING; ALL_TAC] THEN
+  ASM_CASES_TAC `u = &0 /\ v = &0` THEN ASM_REWRITE_TAC[] THENL
+   [ASM_METIS_TAC[REAL_MUL_RZERO; REAL_ADD_LID]; ALL_TAC] THEN
+  REWRITE_TAC[DE_MORGAN_THM] THEN STRIP_TAC THENL
+   [ALL_TAC;
+    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN ONCE_REWRITE_TAC[SWAP_EXISTS_THM];
+    ONCE_REWRITE_TAC[CONJ_SYM];
+    ONCE_REWRITE_TAC[CONJ_SYM] THEN
+    ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN ONCE_REWRITE_TAC[SWAP_EXISTS_THM]] THEN
+  ASM_SIMP_TAC[REAL_FIELD
+   `~(a = &0)
+     ==> (a * x + b * y = u /\ c * x + d * y = v <=>
+         x = (u - b * y) / a /\ (a * d - b * c) * y = a * v - c * u)`] THEN
+  GEN_REWRITE_TAC I [SWAP_EXISTS_THM] THEN REWRITE_TAC[UNWIND_THM2] THEN
+  REWRITE_TAC[LINEAR_EQUATIONS_1_EQ] THEN
+  REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC REAL_RING);;
+
 (* ------------------------------------------------------------------------- *)
 (* Handy definitions and basic lemmas for real intervals.                    *)
 (* ------------------------------------------------------------------------- *)
@@ -370,6 +423,16 @@ let REAL_CLOSED_OPEN_INTERVAL = prove
  (`!a b. a <= b ==> real_interval[a,b] = real_interval(a,b) UNION {a,b}`,
   SIMP_TAC[EXTENSION; IN_UNION; IN_REAL_INTERVAL; IN_INSERT; NOT_IN_EMPTY] THEN
   REAL_ARITH_TAC);;
+
+let IS_REALINTERVAL_SING = prove
+ (`!a. is_realinterval {a}`,
+  REWRITE_TAC[is_realinterval; IN_SING] THEN REAL_ARITH_TAC);;
+
+let IS_REALINTERVAL_CONTAINS_INTERVAL = prove
+ (`!s a b. is_realinterval s /\ a IN s /\ b IN s
+           ==> real_interval[a,b] SUBSET s`,
+  REWRITE_TAC[SUBSET; is_realinterval; IN_REAL_INTERVAL] THEN
+  MESON_TAC[]);;
 
 let IS_REALINTERVAL_SHRINK = prove
  (`!s. is_realinterval (IMAGE (\x. x / (&1 + abs x)) s) <=>
@@ -951,8 +1014,22 @@ let CONVERGENT_BOUNDED_MONOTONE = prove
   ASM_MESON_TAC[REAL_ARITH `abs(x - --l) = abs(--x - l)`]);;
 
 (* ------------------------------------------------------------------------- *)
-(* A characterization of monotonicity.                                       *)
+(* Monotonic functions R->R.                                                 *)
 (* ------------------------------------------------------------------------- *)
+
+let STRICTLY_INCREASING_ALT = prove
+ (`!P f:real->real.
+        (!x y. P x /\ P y /\ x < y ==> f x < f y) <=>
+        (!x y. P x /\ P y /\ x <= y ==> f x <= f y) /\
+        (!x y. P x /\ P y /\ f x = f y ==> x = y)`,
+  METIS_TAC[REAL_LT_TOTAL; REAL_LE_LT; REAL_LT_ANTISYM]);;
+
+let STRICTLY_DECREASING_ALT = prove
+ (`!P f:real->real.
+        (!x y. P x /\ P y /\ x < y ==> f y < f x) <=>
+        (!x y. P x /\ P y /\ x <= y ==> f y <= f x) /\
+        (!x y. P x /\ P y /\ f x = f y ==> x = y)`,
+  METIS_TAC[REAL_LT_TOTAL; REAL_LE_LT; REAL_LT_ANTISYM]);;
 
 let REAL_NON_MONOTONE = prove
  (`!P f:real->real.
