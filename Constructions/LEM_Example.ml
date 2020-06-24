@@ -1,3 +1,4 @@
+needs "Constructions/epsilon.ml";;
 (* Law of excluded middle (LEM) *)
 
 let lem = prove(`!x:epsilon. isExprType x (TyBase "bool") ==> ((eval x to bool) \/ ~(eval x to bool))`,
@@ -78,7 +79,7 @@ INST [`Q_ (0 = 0) _Q`,`x:epsilon`] lem;;
 
 	
 	(*The proof structure used previously requires a construction not a term, therefore we will do the proof with the right hand side of this equivalence, and them make the substitution at the end.*)
-	let quote_construct_equiv = TERM_TO_CONSTRUCTION `Q_ (0 = 0) _Q`;;
+	let quote_construct_equiv = QUOTE_TO_CONSTRUCTION_CONV `Q_ (0 = 0) _Q`;;
 	let construction_form = rhs (concl quote_construct_equiv);;
 
 	let quoteLEM_with_assumption = SPEC construction_form lem;;
