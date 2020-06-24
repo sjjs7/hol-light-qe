@@ -1,16 +1,19 @@
+needs "Constructions/epsilon.ml";;
+needs "Constructions/QuotationTactics.ml";;
 (*Testing a few proofs to make sure this definition works*)
 
 (*Trivial proof that x is effecitve in x + 3*)
-prove(effectiveIn `x:num` `x + 3`,
+prove(mk_neg (mk_not_effective_in `x:num` `x + 3` `y:num`),
+	REWRITE_TAC[NOT_FORALL_THM] THEN
 	EXISTS_TAC `x + 1` THEN
 	BETA_TAC THEN
 	ARITH_TAC
-);;
+);;  
 
 (*Trivial proof that x is not effective in x = x*)
-prove(mk_neg (effectiveIn `x:bool` `x <=> x`),
+prove(mk_not_effective_in `x:bool` `x <=> x` `y:bool`,
 	REWRITE_TAC[REFL `x`]
-);; 
+);;  
 
 (*Helper lemmas for proving disquotation*)
 let appsplitexpr = prove(`isExpr (App a0 a1) ==> isExpr a0 /\ isExpr a1`,
@@ -57,7 +60,7 @@ let isPeano = define `
 `;;
 
 (*Function to take a term and turn it into a quoted form, then preface it with isPeano*)
-let genIsPeano tm = mk_comb(`isPeano`,rhs (concl(TERM_TO_CONSTRUCTION_CONV (mk_quote tm))));;
+let genIsPeano tm = mk_comb(`isPeano`,rhs (concl(QUOTE_TO_CONSTRUCTION_CONV (mk_quote tm))));;
 
 prove(genIsPeano `0 + 1 = 0`,
 REWRITE_TAC[isPeano;COND_ELIM_THM;epsilonDistinct;epsilonInjective;] THEN
