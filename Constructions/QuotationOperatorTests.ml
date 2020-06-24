@@ -1,4 +1,6 @@
-(*Similair to the tests for epsilon, this will prove a few theoremms to verify that _Q_ and Q_ _Q work as intended, along with a few tests with OCaml functions to ensure the Quote term is working correctly*)
+needs "Constructions/QuotationTactics.ml";;
+needs "Constructions/epsilon.ml";;
+(*Similair to the tests for epsilon, this will prove a few theorems to verify that _Q_ and Q_ _Q work as intended, along with a few tests with OCaml functions to ensure the Quote term is working correctly*)
 
 (*This tests that quotations are correctly converted to epsilon terms*)
 prove(`Q_ (x + 3) _Q = (App (App (QuoConst "+" (TyBiCons "fun" (TyBase "num") (TyBiCons "fun" (TyBase "num") (TyBase "num")))) (QuoVar "x" (TyBase "num")))
@@ -6,17 +8,17 @@ prove(`Q_ (x + 3) _Q = (App (App (QuoConst "+" (TyBiCons "fun" (TyBase "num") (T
    (App (QuoConst "BIT1" (TyBiCons "fun" (TyBase "num") (TyBase "num")))
    (App (QuoConst "BIT1" (TyBiCons "fun" (TyBase "num") (TyBase "num")))
    (QuoConst "_0" (TyBase "num"))))))`,
-TERM_TO_CONSTRUCTION_TAC THEN
+QUOTE_TO_CONSTRUCTION_TAC THEN
 REFL_TAC
 );;
 
 (*These tests ensure that OCaml functions behave correctly when dealing with quotations*)
 
-(*Also testing substitutions into TERM_TO_CONSTRUCTION*)
-assert ((concl (SUBS [ASSUME `x = 2`] (TERM_TO_CONSTRUCTION  `Q_ x + 3 _Q`))) = concl (TERM_TO_CONSTRUCTION `Q_ x + 3 _Q`));;
+(*Also testing substitutions into QUOTE_TO_CONSTRUCTION*)
+assert ((concl (SUBS [ASSUME `x = 2`] (QUOTE_TO_CONSTRUCTION_CONV  `Q_ x + 3 _Q`))) = concl (QUOTE_TO_CONSTRUCTION_CONV `Q_ x + 3 _Q`));;
 
 (*Instantiation should also not do anything to a quotation*)
-assert ((concl (INST [`2`,`x:num`] (TERM_TO_CONSTRUCTION  `Q_ x + 3 _Q`))) = concl (TERM_TO_CONSTRUCTION `Q_ x + 3 _Q`));;
+assert ((concl (INST [`2`,`x:num`] (QUOTE_TO_CONSTRUCTION_CONV  `Q_ x + 3 _Q`))) = concl (QUOTE_TO_CONSTRUCTION_CONV `Q_ x + 3 _Q`));;
 
 (*The above theorems were for substituting into proven theorems, these ones will test the respective operations on terms*)
 (*Epsilon terms will not appear here as they have no variables that it is possible to substitute into
