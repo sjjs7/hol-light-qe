@@ -4,6 +4,7 @@ STANDALONE_EXAMPLES:=\
 	Library/agm \
 	Library/binary \
 	Library/binomial \
+	Library/bitmatch \
 	Examples/borsuk \
 	Examples/brunn_minkowski \
 	Library/card \
@@ -38,6 +39,7 @@ STANDALONE_EXAMPLES:=\
 	Library/modmul_group \
 	Library/multiplicative \
 	Examples/multiwf \
+	Examples/nist_curves \
 	Examples/padics \
 	Examples/pell \
 	Library/permutations \
@@ -45,6 +47,7 @@ STANDALONE_EXAMPLES:=\
 	Library/products \
 	Examples/prog \
 	Examples/prover9 \
+	Examples/pseudoprime \
 	Library/q \
 	Examples/rectypes \
 	Library/ringtheory \

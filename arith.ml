@@ -7,6 +7,7 @@
 (*              (c) Copyright, John Harrison 1998-2007                       *)
 (*                 (c) Copyright, Marco Maggesi 2015                         *)
 (*      (c) Copyright, Andrea Gabrielli, Marco Maggesi 2017-2018             *)
+(*                (c) Copyright, Mario Carneiro 2020                         *)
 (* ========================================================================= *)
 
 needs "recursion.ml";;
@@ -260,6 +261,10 @@ let EXP_MULT = prove
    [CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN
     INDUCT_TAC THEN ASM_REWRITE_TAC[EXP; MULT_CLAUSES];
     REWRITE_TAC[MULT_EXP] THEN MATCH_ACCEPT_TAC MULT_SYM]);;
+
+let EXP_EXP = prove
+ (`!x m n. (x EXP m) EXP n = x EXP (m * n)`,
+  REWRITE_TAC[EXP_MULT]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Define the orderings recursively too.                                     *)
@@ -1365,6 +1370,11 @@ let DIV_EQ_0 = prove
     MATCH_MP_TAC DIV_UNIQ THEN EXISTS_TAC `m:num` THEN
     ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES]]);;
 
+let MOD_DIV_EQ_0 = prove
+ (`!m n. ~(n = 0) ==> (m MOD n) DIV n = 0`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN (fun th -> IMP_REWRITE_TAC [th; DIV_EQ_0; MOD_LT_EQ]));;
+
 let MOD_EQ_0 = prove
  (`!m n. (m MOD n = 0) <=> ?q. m = q * n`,
   REPEAT GEN_TAC THEN ASM_CASES_TAC `n = 0` THEN
@@ -1613,6 +1623,22 @@ let DIV_EXP,MOD_EXP = (CONJ_PAIR o prove)
   REWRITE_TAC[LT; GSYM NOT_LT; ONE; TWO] THEN
   ASM_REWRITE_TAC[SYM ONE; GSYM NOT_LE]);;
 
+let FORALL_LT_MOD_THM = prove
+ (`!P n. (!a. a < n ==> P a) <=> n = 0 \/ !a. P(a MOD n)`,
+  MESON_TAC[LT; MOD_EQ_SELF; MOD_LT_EQ]);;
+
+let FORALL_MOD_THM = prove
+ (`!P n. ~(n = 0) ==> ((!a. P(a MOD n)) <=> (!a. a < n ==> P a))`,
+  SIMP_TAC[FORALL_LT_MOD_THM]);;
+
+let EXISTS_LT_MOD_THM = prove
+ (`!P n. (?a. a < n /\ P a) <=> ~(n = 0) /\ ?a. P(a MOD n)`,
+  MESON_TAC[LT; MOD_EQ_SELF; MOD_LT_EQ]);;
+
+let EXISTS_MOD_THM = prove
+ (`!P n. ~(n = 0) ==> ((?a. P(a MOD n)) <=> (?a. a < n /\ P a))`,
+  SIMP_TAC[EXISTS_LT_MOD_THM]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Theorems for eliminating cutoff subtraction, predecessor, DIV and MOD.    *)
 (* We have versions that introduce universal or existential quantifiers.     *)
@@ -1650,6 +1676,25 @@ let DIVMOD_ELIM_THM' = prove
         ?q r. (n = 0 /\ q = 0 /\ r = m \/ m = q * n + r /\ r < n) /\ P q r`,
   MP_TAC(INST [`\x:num y:num. ~P x y`,`P:num->num->bool`] DIVMOD_ELIM_THM) THEN
   MESON_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Pushing and pulling to combine nested MOD terms into a single MOD.        *)
+(* ------------------------------------------------------------------------- *)
+
+let MOD_DOWN_CONV =
+  let MOD_SUC_MOD = METIS[ADD1; MOD_ADD_MOD; MOD_MOD_REFL]
+   `(SUC(m MOD n)) MOD n = SUC m MOD n` in
+  let addmul_conv = GEN_REWRITE_CONV I
+    [GSYM MOD_SUC_MOD; GSYM MOD_ADD_MOD; GSYM MOD_MULT_MOD2; GSYM MOD_EXP_MOD]
+  and mod_conv = GEN_REWRITE_CONV I [MOD_MOD_REFL] in
+  let rec downconv tm =
+   ((addmul_conv THENC LAND_CONV downconv) ORELSEC
+    (mod_conv THENC downconv) ORELSEC
+    SUB_CONV downconv) tm
+  and upconv =
+    GEN_REWRITE_CONV DEPTH_CONV
+     [MOD_SUC_MOD; MOD_ADD_MOD; MOD_MULT_MOD2; MOD_EXP_MOD; MOD_MOD_REFL] in
+  downconv THENC upconv;;
 
 (* ------------------------------------------------------------------------- *)
 (* Crude but useful conversion for cancelling down equations.                *)

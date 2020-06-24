@@ -27,6 +27,9 @@
 (*  - WORD_RULE for simple algebraic properties                              *)
 (*  - WORD_BITWISE_RULE for bitwise-type properties of logical operations    *)
 (*  - WORD_ARITH for things involving numerical values                       *)
+(*                                                                           *)
+(*              (c) Copyright, John Harrison 2019-2020                       *)
+(*                (c) Copyright, Mario Carneiro 2020                         *)
 (* ========================================================================= *)
 
 let HAS_SIZE_8 = HAS_SIZE_DIMINDEX_RULE `:8`;;
@@ -82,40 +85,6 @@ add_word_sizes [DIMINDEX_1; DIMINDEX_2; DIMINDEX_3; DIMINDEX_4];;
 add_word_sizes [DIMINDEX_8; DIMINDEX_16; DIMINDEX_32; DIMINDEX_64];;
 
 add_word_sizes [DIMINDEX_128; DIMINDEX_256; DIMINDEX_512];;
-
-(* ------------------------------------------------------------------------- *)
-(* Pushing and pulling to combine nested MOD or rem terms.                   *)
-(* ------------------------------------------------------------------------- *)
-
-let MOD_DOWN_CONV =
-  let MOD_SUC_MOD = METIS[ADD1; MOD_ADD_MOD; MOD_MOD_REFL]
-   `(SUC(m MOD n)) MOD n = SUC m MOD n` in
-  let addmul_conv = GEN_REWRITE_CONV I
-    [GSYM MOD_SUC_MOD; GSYM MOD_ADD_MOD; GSYM MOD_MULT_MOD2; GSYM MOD_EXP_MOD]
-  and mod_conv = GEN_REWRITE_CONV I [MOD_MOD_REFL] in
-  let rec downconv tm =
-   ((addmul_conv THENC LAND_CONV downconv) ORELSEC
-    (mod_conv THENC downconv) ORELSEC
-    SUB_CONV downconv) tm
-  and upconv =
-    GEN_REWRITE_CONV DEPTH_CONV
-     [MOD_SUC_MOD; MOD_ADD_MOD; MOD_MULT_MOD2; MOD_EXP_MOD; MOD_MOD_REFL] in
-  downconv THENC upconv;;
-
-let INT_REM_DOWN_CONV =
-  let addmul_conv = GEN_REWRITE_CONV I
-    [GSYM INT_NEG_REM; GSYM INT_ADD_REM; GSYM INT_SUB_REM;
-     GSYM INT_MUL_REM; GSYM INT_POW_REM]
-  and mod_conv = GEN_REWRITE_CONV I [INT_REM_REM] in
-  let rec downconv tm =
-   ((addmul_conv THENC LAND_CONV downconv) ORELSEC
-    (mod_conv THENC downconv) ORELSEC
-    SUB_CONV downconv) tm
-  and upconv =
-    GEN_REWRITE_CONV DEPTH_CONV
-     [INT_NEG_REM; INT_ADD_REM; INT_SUB_REM; INT_MUL_REM;
-      INT_POW_REM; INT_REM_REM] in
-  downconv THENC upconv;;
 
 (* ------------------------------------------------------------------------- *)
 (* Some generic lemmas about digit sums.                                     *)
@@ -267,6 +236,10 @@ let BITVAL_EQ_1 = prove
   ASM_CASES_TAC `b:bool` THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
+let BITVAL_POS = prove
+ (`!b. 0 < bitval b <=> b`,
+  REWRITE_TAC[ARITH_RULE `0 < a <=> ~(a = 0)`; BITVAL_EQ_0]);;
+
 let BITVAL_NOT = prove
  (`!b. bitval(~b) = 1 - bitval b`,
   REWRITE_TAC[FORALL_BOOL_THM; BITVAL_CLAUSES] THEN CONV_TAC NUM_REDUCE_CONV);;
@@ -292,9 +265,39 @@ let INT_BITVAL_NOT = prove
  (`!b. &(bitval(~b)):int = &1 - &(bitval b)`,
   SIMP_TAC[BITVAL_NOT; GSYM INT_OF_NUM_SUB; BITVAL_BOUND]);;
 
+let REAL_BITVAL_NOT = prove
+ (`!b. &(bitval(~b)):real = &1 - &(bitval b)`,
+  SIMP_TAC[BITVAL_NOT; GSYM REAL_OF_NUM_SUB; BITVAL_BOUND]);;
+
 let BITVAL_ODD = prove
  (`!n. bitval(ODD n) = n MOD 2`,
   REWRITE_TAC[bitval; GSYM NOT_EVEN; MOD_2_CASES; COND_SWAP]);;
+
+let LE_BITVAL = prove
+ (`!b c. bitval b <= bitval c <=> b ==> c`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[bitval] THEN
+  REPEAT COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let INT_LE_BITVAL = prove
+ (`!b c. &(bitval b):int <= &(bitval c) <=> b ==> c`,
+  REWRITE_TAC[INT_OF_NUM_LE; LE_BITVAL]);;
+
+let REAL_LE_BITVAL = prove
+ (`!b c. &(bitval b):real <= &(bitval c) <=> b ==> c`,
+  REWRITE_TAC[REAL_OF_NUM_LE; LE_BITVAL]);;
+
+let EQ_BITVAL = prove
+ (`!b c. (bitval b = bitval c) <=> (b <=> c)`,
+  REWRITE_TAC[GSYM LE_ANTISYM; LE_BITVAL] THEN CONV_TAC TAUT);;
+
+let INT_EQ_BITVAL = prove
+ (`!b c. &(bitval b):int = &(bitval c) <=> (b <=> c)`,
+  REWRITE_TAC[INT_OF_NUM_EQ; EQ_BITVAL]);;
+
+let REAL_EQ_BITVAL = prove
+ (`!b c. &(bitval b):real = &(bitval c) <=> (b <=> c)`,
+  REWRITE_TAC[REAL_OF_NUM_EQ; EQ_BITVAL]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Some more binary-specific lemmas.                                         *)
@@ -720,6 +723,12 @@ let VAL_MOD = prove
   SIMP_TAC[SUBSET; IN_ELIM_THM; IMP_CONJ; MULT_EQ_0; BITVAL_EQ_0; NOT_LT] THEN
   MESON_TAC[BIT_TRIVIAL]);;
 
+let VAL_MOD_2 = prove
+ (`!x:N word. val x MOD 2 = bitval(bit 0 x)`,
+  ONCE_REWRITE_TAC[ARITH_RULE `2 = 2 EXP 1`] THEN
+  REWRITE_TAC[VAL_MOD; ARITH_RULE `i < 1 <=> i = 0`; SING_GSPEC] THEN
+  REWRITE_TAC[NSUM_SING; EXP; MULT_CLAUSES]);;
+
 let VAL_MOD_STEP = prove
  (`!(x:N word) k.
       val x MOD 2 EXP (k + 1) = 2 EXP k * bitval(bit k x) + val x MOD 2 EXP k`,
@@ -955,6 +964,170 @@ let INT_REM_IVAL = prove
   POP_ASSUM MP_TAC THEN
   SIMP_TAC[LE_EXISTS; INT_POW_ADD; LEFT_IMP_EXISTS_THM] THEN
   REPEAT STRIP_TAC THEN CONV_TAC INTEGER_RULE);;
+
+(* ------------------------------------------------------------------------- *)
+(* Bit operations on `num`.                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let numbit = new_definition `numbit i n = ODD(n DIV (2 EXP i))`;;
+
+let NUMBIT_VAL = prove (`numbit i (val (e:N word)) = bit i e`,
+  REWRITE_TAC [numbit; BIT_VAL]);;
+
+(* * BIT_PRED `i` returns (None, `|- i = _0`) or (Some(`j`), `|- i = SUC j`)
+     if `i` is a raw numeral (a numeral without the initial `NUMERAL`).
+   * NUMBIT_CONV `numbit n i` proves `numbit n i = T` or `numbit n i = F` if
+     `n` and `i` are numerals or raw numerals. *)
+
+let BIT_PRED, NUMBIT_CONV =
+  let i,j,n,B0,B1 = `i:num`,`j:num`,`n:num`,`BIT0`,`BIT1` in
+  let B00 = CONJUNCT2 ARITH_ZERO in
+  let th_0 = (PURE_REWRITE_RULE [NUMERAL] o prove)
+   (`numbit i 0 = F`, REWRITE_TAC [numbit; DIV_0; ODD]) in
+  let th00,th01 = (CONJ_PAIR o PURE_REWRITE_RULE [NUMERAL] o prove)
+   (`numbit 0 (BIT0 n) = F /\ numbit 0 (BIT1 n) = T`,
+     REWRITE_TAC [numbit; EXP; DIV_1; ARITH_ODD]) in
+  let thS0,thS1 = (CONJ_PAIR o UNDISCH o prove) (`i = SUC j ==>
+    numbit i (BIT0 n) = numbit j n /\ numbit i (BIT1 n) = numbit j n`,
+    DISCH_THEN SUBST1_TAC THEN CONV_TAC BITS_ELIM_CONV THEN
+    REWRITE_TAC [numbit; EXP; GSYM DIV_DIV;
+      ARITH_RULE `(2 * n + 1) DIV 2 = n /\ (2 * n) DIV 2 = n`]) in
+  let thB1S = prove (`BIT1 i = SUC (BIT0 i)`, REWRITE_TAC [ARITH_SUC]) in
+  let thB10 = MATCH_MP (DISCH_ALL thS0) thB1S
+  and thB11 = MATCH_MP (DISCH_ALL thS1) thB1S in
+  let thSB1 = (UNDISCH o prove) (`i = SUC j ==> BIT0 i = SUC (BIT1 j)`,
+    DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [ARITH_SUC]) in
+  let thB00 = PROVE_HYP thSB1 (INST [`BIT0 i`,i;`BIT1 j`,j] thS0)
+  and thB01 = PROVE_HYP thSB1 (INST [`BIT0 i`,i;`BIT1 j`,j] thS1) in
+  let th0B00,th0B01 =
+    let th = AP_TERM `numbit` (TRANS (AP_TERM `BIT0` (ASSUME `i = _0`)) B00) in
+    TRANS (AP_THM th `BIT0 n`) th00, TRANS (AP_THM th `BIT1 n`) th01 in
+  let thN = prove
+   (`numbit (NUMERAL i) (NUMERAL n) = numbit i n`, REWRITE_TAC [NUMERAL]) in
+  let get_suc th = Some (rand (rhs (concl th))), th in
+  let rec mk_pred = function
+  | Comb(Const("BIT0",_),i') ->
+    (match mk_pred i' with
+    | Some j', th -> get_suc (PROVE_HYP th (INST [i',i; j',j] thSB1))
+    | None, th -> None, TRANS (AP_TERM B0 th) B00)
+  | Comb(Const("BIT1",_),i') -> get_suc (INST [i',i] thB1S)
+  | Const("_0",_) as i' -> None, REFL i'
+  | _ -> failwith "BIT_PRED" in
+  let rec go = function
+  | i',Const("_0",_) -> INST [i',i] th_0
+  | Const("_0",_),Comb(Const("BIT0",_),n') -> INST [n',n] th00
+  | Const("_0",_),Comb(Const("BIT1",_),n') -> INST [n',n] th01
+  | Comb(Const("BIT0",_),i'),Comb(Const("BIT0",_),n') ->
+    go_B0 th0B00 thB00 i' n'
+  | Comb(Const("BIT0",_),i'),Comb(Const("BIT1",_),n') ->
+    go_B0 th0B01 thB01 i' n'
+  | Comb(Const("BIT1",_),i'),Comb(Const("BIT0",_),n') ->
+    TRANS (INST [i',i; n',n] thB10) (go (mk_comb (B0,i'),n'))
+  | Comb(Const("BIT1",_),i'),Comb(Const("BIT1",_),n') ->
+    TRANS (INST [i',i; n',n] thB11) (go (mk_comb (B0,i'),n'))
+  | _ -> failwith "NUMBIT_CONV"
+  and go_B0 th0 thS i' n' = match mk_pred i' with
+  | Some j',th ->
+    let th' = PROVE_HYP th (INST [i',i; j',j; n',n] thS) in
+    TRANS th' (go (mk_comb (B1,j'), n'))
+  | None, th -> PROVE_HYP th (INST [i',i; n',n] th0) in
+  mk_pred, function
+  | Comb(Comb(Const("numbit",_),
+      Comb(Const("NUMERAL",_),i')),Comb(Const("NUMERAL",_),n')) ->
+    TRANS (INST [i',i;n',n] thN) (go (i',n'))
+  | Comb(Comb(Const("numbit",_),i'),n') -> go (i',n')
+  | _ -> failwith "NUMBIT_CONV";;
+
+(* ------------------------------------------------------------------------- *)
+(* A primitive operation for splitting numerals along powers of 2.           *)
+(* ------------------------------------------------------------------------- *)
+
+let num_shift_add = new_definition
+  `num_shift_add a b n = a MOD 2 EXP n + b * 2 EXP n`;;
+
+let num_shift_add_0 = prove
+ (`num_shift_add a b 0 = b`,
+  REWRITE_TAC [num_shift_add; EXP; MOD_1; MULT_CLAUSES; ADD]);;
+
+let EXP_2_MOD_LT =
+  GEN_ALL (REWRITE_RULE [GSYM (SPEC `a:num` MOD_LT_EQ)] EXP_2_NE_0);;
+
+let num_shift_add_SUC = prove
+ (`num_shift_add (BIT0 a) b (SUC n) = BIT0 (num_shift_add a b n) /\
+   num_shift_add (BIT1 a) b (SUC n) = BIT1 (num_shift_add a b n)`,
+  REWRITE_TAC [num_shift_add; EXP] THEN CONV_TAC BITS_ELIM_CONV THEN
+  REWRITE_TAC [LEFT_ADD_DISTRIB; MOD_MULT2; MULT_AC] THEN
+  REWRITE_TAC [ADD_AC; EQ_ADD_LCANCEL] THEN
+  ONCE_REWRITE_TAC [SYM (MATCH_MP MOD_LT
+    (MATCH_MP (ARITH_RULE `a < b ==> a * 2 + 1 < b * 2`)
+      (SPECL [`a:num`;`n:num`] EXP_2_MOD_LT)))] THEN
+  ONCE_REWRITE_TAC [GSYM MOD_ADD_MOD] THEN
+  REWRITE_TAC [ONCE_REWRITE_RULE [MULT_SYM] MOD_MULT2; MOD_MOD_REFL]);;
+
+let num_shift_add_lt = prove
+ (`!a b n i. b < 2 EXP i ==> num_shift_add a b n < 2 EXP (i + n)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC [num_shift_add; EXP_ADD] THEN
+  DISCH_TAC THEN MATCH_MP_TAC LTE_TRANS THEN EXISTS_TAC `SUC b * 2 EXP n` THEN
+  ASM_REWRITE_TAC [LE_MULT_RCANCEL; MULT_CLAUSES; ADD_SYM; LT_ADD_LCANCEL;
+    EXP_2_MOD_LT; LE_SUC_LT]);;
+
+let num_shift_add_mod = prove
+ (`num_shift_add a (b MOD 2 EXP i) n = num_shift_add a b n MOD 2 EXP (i + n)`,
+  ONCE_REWRITE_TAC [(SYM o MATCH_MP MOD_LT o SPEC_ALL)
+    (MATCH_MP num_shift_add_lt (SPECL [`b:num`; `i:num`] EXP_2_MOD_LT))] THEN
+  REWRITE_TAC [num_shift_add; EXP_ADD] THEN
+  ONCE_REWRITE_TAC [GSYM MOD_ADD_MOD] THEN
+  REWRITE_TAC [GSYM (ONCE_REWRITE_RULE [MULT_SYM] MOD_MULT2); MOD_MOD_REFL]);;
+
+(* (NUM_SHIFT_ADD_CONV `num_shift_add a b i`), and
+   (NUM_SHIFT_ADD_CORE `a` `b` `i`), will prove `|- num_shift_add a b i = n`
+   where a,b,i,n are numerals or raw numerals. *)
+
+let NUM_SHIFT_ADD_CORE, NUM_SHIFT_ADD_CONV =
+  let i,j,a,b,e = `i:num`,`j:num`,`a:num`,`b:num`,`e:num` in
+  let i0 = (UNDISCH o prove) (`i = _0 ==> num_shift_add a b i = b`,
+    DISCH_THEN SUBST1_TAC THEN CONV_TAC BITS_ELIM_CONV THEN
+    ACCEPT_TAC num_shift_add_0) in
+  let B0S,B1S = (CONJ_PAIR o UNDISCH_ALL o prove)
+   (`num_shift_add a b j = e ==> i = SUC j ==>
+    num_shift_add (BIT0 a) b i = BIT0 e /\
+    num_shift_add (BIT1 a) b i = BIT1 e`,
+    DISCH_THEN (SUBST1_TAC o SYM) THEN DISCH_THEN SUBST1_TAC THEN
+    REWRITE_TAC [num_shift_add_SUC]) in
+  let ZS = REWRITE_RULE [ARITH_ZERO] (INST [`_0`,a] B0S)
+  and B00 = REWRITE_RULE [ARITH_ZERO] (INST [`_0`,e] B0S) in
+  let Z0 = REWRITE_RULE [ARITH_ZERO] (INST [`_0`,e] ZS) in
+  let rec go a' b' i' = match BIT_PRED i' with
+  | None, th -> PROVE_HYP th (INST [i',i; a',a; b',b] i0)
+  | Some j', th ->
+    PROVE_HYP th (match a' with
+    | Comb(Const("BIT0",_),a') ->
+      let th' = go a' b' j' in
+      PROVE_HYP th' (match rhs (concl th') with
+      | Const("_0",_) -> INST [i',i; j',j; a',a; b',b] B00
+      | e' -> INST [e',e; i',i; j',j; a',a; b',b] B0S)
+    | Comb(Const("BIT1",_),a') ->
+      let th' = go a' b' j' in
+      let e' = rhs (concl th') in
+      PROVE_HYP th' (INST [e',e; i',i; j',j; a',a; b',b] B1S)
+    | Const("_0",_) ->
+      let th' = go a' b' j' in
+      PROVE_HYP th' (match rhs (concl th') with
+      | Const("_0",_) -> INST [i',i; j',j; a',a; b',b] Z0
+      | e' -> INST [e',e; i',i; j',j; a',a; b',b] ZS)
+    | _ -> failwith "NUM_SHIFT_ADD_CORE") in
+  let pthn = (UNDISCH o prove)
+   (`num_shift_add a b i = e ==>
+     num_shift_add (NUMERAL a) (NUMERAL b) (NUMERAL i) = NUMERAL e`,
+    REWRITE_TAC [NUMERAL]) in
+  go, function
+  | Comb(Comb(Comb(Const("num_shift_add",_), Comb(Const("NUMERAL",_),a')),
+      Comb(Const("NUMERAL",_),b')), Comb(Const("NUMERAL",_),i')) ->
+    let th = go a' b' i' in
+    PROVE_HYP th (INST [a',a; b',b; i',i; rhs (concl th),e] pthn)
+  | Comb(Comb(Comb(Const("num_shift_add",_),a'),b'),i') ->
+    go a' b' i'
+  | _ -> failwith "NUM_SHIFT_ADD_CONV";;
 
 (* ------------------------------------------------------------------------- *)
 (* Some "limiting" values with names in the style of C's "limits.h" macros.  *)
@@ -1197,6 +1370,26 @@ let VAL_WORD_NOT = prove
   SPEC_TAC(`dimindex(:N)`,`k:num`) THEN INDUCT_TAC THEN
   ASM_REWRITE_TAC[NSUM_CLAUSES_NUMSEG_LT; EXP; ADD_CLAUSES; MULT_CLAUSES] THEN
   ASM_ARITH_TAC);;
+
+let INT_VAL_WORD_NOT = prove
+ (`!x:N word. &(val(word_not x)):int = &2 pow dimindex(:N) - &1 - &(val x)`,
+  GEN_TAC THEN
+  REWRITE_TAC[VAL_WORD_NOT; ARITH_RULE `n - 1 - m = n - (m + 1)`] THEN
+  W(MP_TAC o PART_MATCH (rand o rand) INT_OF_NUM_SUB o lhand o snd) THEN
+  REWRITE_TAC[VAL_BOUND; ARITH_RULE `x + 1 <= n <=> x < n`] THEN
+  DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[GSYM INT_OF_NUM_ADD; GSYM INT_OF_NUM_POW] THEN
+  INT_ARITH_TAC);;
+
+let REAL_VAL_WORD_NOT = prove
+ (`!x:N word. &(val(word_not x)):real = &2 pow dimindex(:N) - &1 - &(val x)`,
+  GEN_TAC THEN
+  REWRITE_TAC[VAL_WORD_NOT; ARITH_RULE `n - 1 - m = n - (m + 1)`] THEN
+  W(MP_TAC o PART_MATCH (rand o rand) REAL_OF_NUM_SUB o lhand o snd) THEN
+  REWRITE_TAC[VAL_BOUND; ARITH_RULE `x + 1 <= n <=> x < n`] THEN
+  DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[GSYM REAL_OF_NUM_ADD; GSYM REAL_OF_NUM_POW] THEN
+  REAL_ARITH_TAC);;
 
 let WORD_POPCOUNT_NOT = prove
  (`!x:N word. word_popcount(word_not x) = dimindex(:N) - word_popcount x`,
@@ -2723,9 +2916,17 @@ let WORD_NEG_0 = prove
  (`word_neg (word 0) = word 0`,
   CONV_TAC WORD_RULE);;
 
+let WORD_NEG_SUB = prove
+ (`!x y:N word. word_neg(word_sub x y) = word_sub y x`,
+  CONV_TAC WORD_RULE);;
+
 let WORD_NEG_EQ_0 = prove
  (`!x:N word. word_neg x = word 0 <=> x = word 0`,
   CONV_TAC WORD_RULE);;
+
+let WORD_NOT_NOT = prove
+ (`!x:N word. word_not(word_not x) = x`,
+  CONV_TAC WORD_BITWISE_RULE);;
 
 let WORD_AND_REFL = prove
  (`!x:N word. word_and x x = x`,
@@ -2776,10 +2977,15 @@ let WORD_XOR_0 = prove
    (!x:N word. word_xor (word 0) x = x)`,
   CONV_TAC WORD_BITWISE_RULE);;
 
+let WORD_XOR_NOT = prove
+ (`(!x y:N word. word_xor (word_not x) y = word_not(word_xor x y)) /\
+   (!x y:N word. word_xor x (word_not y) = word_not(word_xor x y))`,
+  CONV_TAC WORD_BITWISE_RULE);;
+
 let WORD_XOR_NOT0 = prove
  (`(!x:N word. word_xor x (word_not(word 0)) = word_not x) /\
    (!x:N word. word_xor (word_not(word 0)) x = word_not x)`,
-  CONV_TAC WORD_BITWISE_RULE);;
+  REWRITE_TAC[WORD_XOR_NOT; WORD_XOR_0]);;
 
 let WORD_XOR_REFL = prove
  (`!x:N word. word_xor x x = word 0`,
@@ -2799,6 +3005,11 @@ let WORD_AND_1 = prove
   X_GEN_TAC `i:num` THEN ASM_CASES_TAC `i = 0` THEN
   ASM_REWRITE_TAC[BIT_WORD_0] THEN SIMP_TAC[DIMINDEX_GE_1; LE_1]);;
 
+let WORD_AND_1_BITVAL = prove
+ (`(!x:N word. word_and (word 1) x = word(bitval(bit 0 x))) /\
+   (!x:N word. word_and x (word 1) = word(bitval(bit 0 x)))`,
+  REWRITE_TAC[bitval; WORD_AND_1] THEN MESON_TAC[]);;
+
 let WORD_NOT_NEG = prove
  (`!x:N word. word_not(word_neg x) = word_sub x (word 1)`,
   GEN_TAC THEN REWRITE_TAC[WORD_NOT_AS_SUB] THEN
@@ -2813,6 +3024,29 @@ let WORD_NOT_ADD = prove
  (`!x y:N word.
         word_not(word_add x y) = word_add (word_not x) (word_neg y)`,
   REWRITE_TAC[WORD_NOT_AS_SUB] THEN CONV_TAC WORD_RULE);;
+
+let VAL_EQ_MAX_ALT = prove
+ (`!x:N word. val x = 2 EXP dimindex(:N) - 1 <=> x = word_not(word 0)`,
+  GEN_TAC THEN REWRITE_TAC[GSYM VAL_EQ;  VAL_WORD_NOT; VAL_WORD_0; SUB_0]);;
+
+let VAL_EQ_MAX = prove
+ (`!x:N word. val x = 2 EXP dimindex(:N) - 1 <=> word_not x = word 0`,
+  REWRITE_TAC[VAL_EQ_MAX_ALT] THEN CONV_TAC WORD_BITWISE_RULE);;
+
+let VAL_EQ_MAX_MASK = prove
+ (`!x:N word. val x = 2 EXP dimindex(:N) - 1 <=> x = word_neg(word 1)`,
+  REWRITE_TAC[WORD_NEG_1; VAL_EQ_MAX_ALT]);;
+
+let VAL_WORD_OR_EQ_0 = prove
+ (`!x y:N word. val(word_or x y) = 0 <=> val x = 0 /\ val y = 0`,
+  REWRITE_TAC[VAL_EQ_0; WORD_OR_EQ_0]);;
+
+let VAL_WORD_AND_EQ_MAX = prove
+ (`!x y:N word.
+        val(word_and x y) = 2 EXP dimindex(:N) - 1 <=>
+        val x = 2 EXP dimindex(:N) - 1 /\
+        val y = 2 EXP dimindex(:N) - 1`,
+  REWRITE_TAC[VAL_EQ_MAX] THEN CONV_TAC WORD_BITWISE_RULE);;
 
 let WORD_SHL_AND = prove
  (`!(v:N word) w n.
@@ -3013,6 +3247,14 @@ let WORD_XOR_MASK = prove
   REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_MASK] THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC WORD_BITWISE_RULE);;
+
+let WORD_NEG_AND_MASK = prove
+ (`(!b x. word_neg (word_and (word_neg(word(bitval b))) x) =
+          word_and (word_neg(word(bitval b))) (word_neg x)) /\
+   (!b x. word_neg (word_and x (word_neg(word(bitval b)))) =
+          word_and (word_neg x) (word_neg(word(bitval b))))`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_AND_MASK] THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[WORD_NEG_0]);;
 
 let WORD_AND_MASKS = prove
  (`!p q. word_and (word_neg(word(bitval p))) (word_neg(word(bitval q))) =

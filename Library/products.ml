@@ -8,18 +8,6 @@ prioritize_num();;
 (* Products over natural numbers.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-let nproduct = new_definition
-  `nproduct = iterate(( * ):num->num->num)`;;
-
-let NPRODUCT_CLAUSES = prove
- (`(!f. nproduct {} f = 1) /\
-   (!x f s. FINITE(s)
-            ==> (nproduct (x INSERT s) f =
-                 if x IN s then nproduct s f else f(x) * nproduct s f))`,
-  REWRITE_TAC[nproduct; GSYM NEUTRAL_MUL] THEN
-  ONCE_REWRITE_TAC[SWAP_FORALL_THM] THEN
-  MATCH_MP_TAC ITERATE_CLAUSES THEN REWRITE_TAC[MONOIDAL_MUL]);;
-
 let NPRODUCT_SUPPORT = prove
  (`!f s. nproduct (support ( * ) f s) f = nproduct s f`,
   REWRITE_TAC[nproduct; ITERATE_SUPPORT]);;
@@ -191,6 +179,37 @@ let NPRODUCT_RELATED = prove
     (MATCH_MP ITERATE_RELATED MONOIDAL_MUL)) THEN
   ASM_REWRITE_TAC[GSYM nproduct; NEUTRAL_MUL] THEN ASM_MESON_TAC[]);;
 
+let NPRODUCT_CLOSED_NONEMPTY = prove
+ (`!P f:A->num s.
+        FINITE s /\ ~(s = {}) /\
+        (!x y. P x /\ P y ==> P(x * y)) /\ (!a. a IN s ==> P(f a))
+        ==> P(nproduct s f)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(MATCH_MP ITERATE_CLOSED_NONEMPTY MONOIDAL_MUL) THEN
+  DISCH_THEN(MP_TAC o SPEC `P:num->bool`) THEN
+  ASM_SIMP_TAC[NEUTRAL_MUL; GSYM nproduct]);;
+
+let NPRODUCT_RELATED_NONEMPTY = prove
+ (`!R (f:A->num) g s.
+        (!m n m' n'. R m n /\ R m' n' ==> R (m * m') (n * n')) /\
+        FINITE s /\ ~(s = {}) /\ (!i. i IN s ==> R (f i) (g i))
+        ==> R (nproduct s f) (nproduct s g)`,
+  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
+  GEN_TAC THEN REPEAT DISCH_TAC THEN
+  MP_TAC(ISPEC `R:num->num->bool`
+    (MATCH_MP ITERATE_RELATED_NONEMPTY MONOIDAL_MUL)) THEN
+  ASM_REWRITE_TAC[GSYM nproduct; NEUTRAL_MUL] THEN ASM_MESON_TAC[]);;
+
+let CONG_NPRODUCT = prove
+ (`!n f g s:A->bool.
+         FINITE s /\ (!x. x IN s ==> (f x == g x) (mod n))
+         ==> (nproduct s f == nproduct s g) (mod n)`,
+  REPEAT STRIP_TAC THEN MP_TAC(ISPECL
+   [`\x y:num. (x == y) (mod n)`; `f:A->num`; `g:A->num`; `s:A->bool`]
+        NPRODUCT_RELATED) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
+  CONV_TAC NUMBER_RULE);;
+
 let NPRODUCT_CLAUSES_LEFT = prove
  (`!f m n. m <= n ==> nproduct(m..n) f = f(m) * nproduct(m+1..n) f`,
   SIMP_TAC[GSYM NUMSEG_LREC; NPRODUCT_CLAUSES; FINITE_NUMSEG; IN_NUMSEG] THEN
@@ -240,6 +259,12 @@ let NPRODUCT_DELTA = prove
          (if a IN s then b else 1)`,
   REWRITE_TAC[nproduct; GSYM NEUTRAL_MUL] THEN
   SIMP_TAC[ITERATE_DELTA; MONOIDAL_MUL]);;
+
+let EXP_NSUM = prove
+ (`!m n s:A->bool.
+        FINITE s ==> m EXP (nsum s n) = nproduct s (\i. m EXP n i)`,
+  GEN_TAC THEN GEN_TAC THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
+  SIMP_TAC[NSUM_CLAUSES; NPRODUCT_CLAUSES; EXP; EXP_ADD]);;
 
 let HAS_SIZE_CART = prove
  (`!P m. (!i. 1 <= i /\ i <= dimindex(:N) ==> {x | P i x} HAS_SIZE m i)
@@ -328,27 +353,6 @@ let th = prove
 (* ------------------------------------------------------------------------- *)
 (* Now products over integers.                                               *)
 (* ------------------------------------------------------------------------- *)
-
-let NEUTRAL_INT_MUL = prove
- (`neutral(( * ):int->int->int) = &1`,
-  REWRITE_TAC[neutral] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
-  MESON_TAC[INT_MUL_LID; INT_MUL_RID]);;
-
-let MONOIDAL_INT_MUL = prove
- (`monoidal(( * ):int->int->int)`,
-  REWRITE_TAC[monoidal; NEUTRAL_INT_MUL] THEN INT_ARITH_TAC);;
-
-let iproduct = new_definition
-  `iproduct = iterate (( * ):int->int->int)`;;
-
-let IPRODUCT_CLAUSES = prove
- (`(!f. iproduct {} f = &1) /\
-   (!x f s. FINITE(s)
-            ==> (iproduct (x INSERT s) f =
-                 if x IN s then iproduct s f else f(x) * iproduct s f))`,
-  REWRITE_TAC[iproduct; GSYM NEUTRAL_INT_MUL] THEN
-  ONCE_REWRITE_TAC[SWAP_FORALL_THM] THEN
-  MATCH_MP_TAC ITERATE_CLAUSES THEN REWRITE_TAC[MONOIDAL_INT_MUL]);;
 
 let IPRODUCT_SUPPORT = prove
  (`!f s. iproduct (support ( * ) f s) f = iproduct s f`,
@@ -562,6 +566,27 @@ let IPRODUCT_RELATED = prove
     (MATCH_MP ITERATE_RELATED MONOIDAL_INT_MUL)) THEN
   ASM_REWRITE_TAC[GSYM iproduct; NEUTRAL_INT_MUL] THEN ASM_MESON_TAC[]);;
 
+let IPRODUCT_CLOSED_NONEMPTY = prove
+ (`!P f:A->int s.
+        FINITE s /\ ~(s = {}) /\
+        (!x y. P x /\ P y ==> P(x * y)) /\ (!a. a IN s ==> P(f a))
+        ==> P(iproduct s f)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(MATCH_MP ITERATE_CLOSED_NONEMPTY MONOIDAL_INT_MUL) THEN
+  DISCH_THEN(MP_TAC o SPEC `P:int->bool`) THEN
+  ASM_SIMP_TAC[NEUTRAL_INT_MUL; GSYM iproduct]);;
+
+let IPRODUCT_RELATED_NONEMPTY = prove
+ (`!R (f:A->int) g s.
+        (!m n m' n'. R m n /\ R m' n' ==> R (m * m') (n * n')) /\
+        FINITE s /\ ~(s = {}) /\ (!i. i IN s ==> R (f i) (g i))
+        ==> R (iproduct s f) (iproduct s g)`,
+  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
+  GEN_TAC THEN REPEAT DISCH_TAC THEN
+  MP_TAC(ISPEC `R:int->int->bool`
+    (MATCH_MP ITERATE_RELATED_NONEMPTY MONOIDAL_INT_MUL)) THEN
+  ASM_REWRITE_TAC[GSYM iproduct; NEUTRAL_INT_MUL] THEN ASM_MESON_TAC[]);;
+
 let IPRODUCT_CLAUSES_LEFT = prove
  (`!f m n. m <= n ==> iproduct(m..n) f = f(m) * iproduct(m+1..n) f`,
   SIMP_TAC[GSYM NUMSEG_LREC; IPRODUCT_CLAUSES; FINITE_NUMSEG; IN_NUMSEG] THEN
@@ -613,6 +638,12 @@ let IPRODUCT_DELTA = prove
   REWRITE_TAC[iproduct; GSYM NEUTRAL_INT_MUL] THEN
   SIMP_TAC[ITERATE_DELTA; MONOIDAL_INT_MUL]);;
 
+let INT_POW_NSUM = prove
+ (`!x n s:A->bool.
+        FINITE s ==> x pow (nsum s n) = iproduct s (\i. x pow n i)`,
+  GEN_TAC THEN GEN_TAC THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
+  SIMP_TAC[NSUM_CLAUSES; IPRODUCT_CLAUSES; INT_POW; INT_POW_ADD]);;
+
 let th = prove
    (`(!f g s.   (!x. x IN s ==> f(x) = g(x))
                 ==> iproduct s (\i. f(i)) = iproduct s g) /\
@@ -629,18 +660,6 @@ let th = prove
 (* ------------------------------------------------------------------------- *)
 
 prioritize_real();;
-
-let product = new_definition
-  `product = iterate (( * ):real->real->real)`;;
-
-let PRODUCT_CLAUSES = prove
- (`(!f. product {} f = &1) /\
-   (!x f s. FINITE(s)
-            ==> (product (x INSERT s) f =
-                 if x IN s then product s f else f(x) * product s f))`,
-  REWRITE_TAC[product; GSYM NEUTRAL_REAL_MUL] THEN
-  ONCE_REWRITE_TAC[SWAP_FORALL_THM] THEN
-  MATCH_MP_TAC ITERATE_CLAUSES THEN REWRITE_TAC[MONOIDAL_REAL_MUL]);;
 
 let PRODUCT_SUPPORT = prove
  (`!f s. product (support ( * ) f s) f = product s f`,
@@ -866,6 +885,27 @@ let PRODUCT_RELATED = prove
     (MATCH_MP ITERATE_RELATED MONOIDAL_REAL_MUL)) THEN
   ASM_REWRITE_TAC[GSYM product; NEUTRAL_REAL_MUL] THEN ASM_MESON_TAC[]);;
 
+let PRODUCT_CLOSED_NONEMPTY = prove
+ (`!P f:A->real s.
+        FINITE s /\ ~(s = {}) /\
+        (!x y. P x /\ P y ==> P(x * y)) /\ (!a. a IN s ==> P(f a))
+        ==> P(product s f)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(MATCH_MP ITERATE_CLOSED_NONEMPTY MONOIDAL_REAL_MUL) THEN
+  DISCH_THEN(MP_TAC o SPEC `P:real->bool`) THEN
+  ASM_SIMP_TAC[NEUTRAL_REAL_MUL; GSYM product]);;
+
+let PRODUCT_RELATED_NONEMPTY = prove
+ (`!R (f:A->real) g s.
+        (!m n m' n'. R m n /\ R m' n' ==> R (m * m') (n * n')) /\
+        FINITE s /\ ~(s = {}) /\ (!i. i IN s ==> R (f i) (g i))
+        ==> R (product s f) (product s g)`,
+  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
+  GEN_TAC THEN REPEAT DISCH_TAC THEN
+  MP_TAC(ISPEC `R:real->real->bool`
+    (MATCH_MP ITERATE_RELATED_NONEMPTY MONOIDAL_REAL_MUL)) THEN
+  ASM_REWRITE_TAC[GSYM product; NEUTRAL_REAL_MUL] THEN ASM_MESON_TAC[]);;
+
 let PRODUCT_CLAUSES_LEFT = prove
  (`!f m n. m <= n ==> product(m..n) f = f(m) * product(m+1..n) f`,
   SIMP_TAC[GSYM NUMSEG_LREC; PRODUCT_CLAUSES; FINITE_NUMSEG; IN_NUMSEG] THEN
@@ -915,6 +955,12 @@ let PRODUCT_DELTA = prove
          (if a IN s then b else &1)`,
   REWRITE_TAC[product; GSYM NEUTRAL_REAL_MUL] THEN
   SIMP_TAC[ITERATE_DELTA; MONOIDAL_REAL_MUL]);;
+
+let REAL_POW_NSUM = prove
+ (`!x n s:A->bool.
+        FINITE s ==> x pow (nsum s n) = product s (\i. x pow n i)`,
+  GEN_TAC THEN GEN_TAC THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
+  SIMP_TAC[NSUM_CLAUSES; PRODUCT_CLAUSES; real_pow; REAL_POW_ADD]);;
 
 let POLYNOMIAL_FUNCTION_PRODUCT = prove
  (`!s:A->bool p.

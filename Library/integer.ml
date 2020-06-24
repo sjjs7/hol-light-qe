@@ -73,19 +73,6 @@ let INT_DIVIDES_RMUL2_EQ = INTEGER_RULE
 let INT_DIVIDES_MUL2 = INTEGER_RULE
   `!a b c d. a divides b /\ c divides d ==> (a * c) divides (b * d)`;;
 
-let INT_DIVIDES_LABS = prove
- (`!d n. abs(d) divides n <=> d divides n`,
-  REPEAT GEN_TAC THEN SIMP_TAC[INT_ABS] THEN COND_CASES_TAC THEN INTEGER_TAC);;
-
-let INT_DIVIDES_RABS = prove
- (`!d n. d divides (abs n) <=> d divides n`,
-  REPEAT GEN_TAC THEN SIMP_TAC[INT_ABS] THEN COND_CASES_TAC THEN INTEGER_TAC);;
-
-let INT_DIVIDES_ABS = prove
- (`(!d n. abs(d) divides n <=> d divides n) /\
-   (!d n. d divides (abs n) <=> d divides n)`,
-  REWRITE_TAC[INT_DIVIDES_LABS; INT_DIVIDES_RABS]);;
-
 let INT_DIVIDES_POW = prove
  (`!x y n. x divides y ==> (x pow n) divides (y pow n)`,
   REWRITE_TAC[int_divides] THEN MESON_TAC[INT_POW_MUL]);;
@@ -474,6 +461,16 @@ let INT_CONG_POW = prove
   GEN_TAC THEN INDUCT_TAC THEN
   ASM_SIMP_TAC[INT_CONG_MUL; INT_POW; INT_CONG_REFL]);;
 
+let INT_CONG_MUL_1 = prove
+ (`!n x y:int.
+        (x == &1) (mod n) /\ (y == &1) (mod n)
+        ==> (x * y == &1) (mod n)`,
+  MESON_TAC[INT_CONG_MUL; INT_MUL_LID]);;
+
+let INT_CONG_POW_1 = prove
+ (`!a k n:int. (a == &1) (mod n) ==> (a pow k == &1) (mod n)`,
+  MESON_TAC[INT_CONG_POW; INT_POW_ONE]);;
+
 let INT_CONG_MUL_LCANCEL_EQ = prove
  (`!a n x y. coprime(a,n) ==> ((a * x == a * y) (mod n) <=> (x == y) (mod n))`,
   INTEGER_TAC);;
@@ -624,8 +621,18 @@ let INT_CONG_IMP_EQ = prove
 
 let INT_CONG_DIV = prove
  (`!m n a b.
-        &0 < m /\ (a == m * b) (mod (m * n)) ==> (a div m == b) (mod n)`,
+        ~(m = &0) /\ (a == m * b) (mod (m * n)) ==> (a div m == b) (mod n)`,
   METIS_TAC[INT_CONG_DIV2; INT_DIV_MUL; INT_LT_LE]);;
+
+let INT_CONG_DIV_COPRIME = prove
+ (`!m n a b:int.
+        coprime(m,n) /\ m divides a /\ (a == m * b) (mod n)
+        ==> (a div m == b) (mod n)`,
+  REPEAT GEN_TAC THEN ASM_CASES_TAC `m:int = &0` THEN
+  ASM_SIMP_TAC[INT_COPRIME_0; INT_CONG_MOD_1] THENL
+   [INTEGER_TAC; STRIP_TAC] THEN
+  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC INT_CONG_DIV THEN
+  REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC INTEGER_RULE);;
 
 (* ------------------------------------------------------------------------- *)
 (* A stronger form of the CRT.                                               *)
