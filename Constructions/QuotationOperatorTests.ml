@@ -1,6 +1,6 @@
 needs "Constructions/QuotationTactics.ml";;
 needs "Constructions/epsilon.ml";;
-(*Similair to the tests for epsilon, this will prove a few theorems to verify that _Q_ and Q_ _Q work as intended, along with a few tests with OCaml functions to ensure the Quote term is working correctly*)
+(*Similar to the tests for epsilon, this will prove a few theorems to verify that _Q_ and Q_ _Q work as intended, along with a few tests with OCaml functions to ensure the Quote term is working correctly*)
 
 (*This tests that quotations are correctly converted to epsilon terms*)
 prove(`Q_ (x + 3) _Q = (App (App (QuoConst "+" (TyBiCons "fun" (TyBase "num") (TyBiCons "fun" (TyBase "num") (TyBase "num")))) (QuoVar "x" (TyBase "num")))
