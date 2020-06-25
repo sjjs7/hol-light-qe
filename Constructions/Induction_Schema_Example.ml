@@ -2,8 +2,8 @@ needs "Constructions/epsilon.ml";;
 needs "Constructions/QuotationTactics.ml";;
 (*Testing a few proofs to make sure this definition works*)
 
-(*Trivial proof that x is effecitve in x + 3*)
-prove(mk_neg (mk_not_effective_in `x:num` `x + 3` `y:num`),
+(*Trivial proof that x is effective in x + 3*)
+prove(mk_effective_in `x:num` `x + 3` `y:num`,
 	REWRITE_TAC[NOT_FORALL_THM] THEN
 	EXISTS_TAC `x + 1` THEN
 	BETA_TAC THEN
