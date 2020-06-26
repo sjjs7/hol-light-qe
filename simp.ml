@@ -462,7 +462,7 @@ let rec nets_eq n1 n2 =
      firstcomp && secondcomp
 
 let INTERNAL_REWRITES_CONV net rep bin thl isbasic tm=
-  if is_eval_free tm then
+  if eval_free tm then
   let pconvs = lookup tm net in
   try tryfind (fun (_,cnv) -> cnv tm) pconvs
   with Failure _ -> failwith "REWRITES_CONV"
