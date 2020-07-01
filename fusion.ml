@@ -367,7 +367,7 @@ let rec type_subst i ty =
     | Hole(e,ty) -> is_eval_free e
     | Eval(e,ty) -> Issue tm 
 
-  let eval_free tm = can is_eval_free tm 
+  let eval_free tm = (is_eval_free tm = Ok)
 
 (* ------------------------------------------------------------------------- *)
 (* Primitive discriminators.                                                 *)
