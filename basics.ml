@@ -126,11 +126,11 @@ let subst =
       | Abs(v,bod) ->
             let ilist' = filter (not o (vfree_in v) o snd) ilist in
             mk_abs(v,osubs ilist' bod)
-      | Quote(e,_) -> let newquo = qssubs ilist e in mk_quote newquo
+      | Quote(e) -> let newquo = qssubs ilist e in mk_quote newquo
       | _ -> tm in
     if ilist = [] then tm else
     match tm with
-      | Quote(e,_) -> let newquo = qssubs ilist e in mk_quote newquo
+      | Quote(e) -> let newquo = qssubs ilist e in mk_quote newquo
       | Comb(l,r) -> mk_comb(qssubs ilist l, qssubs ilist r) 
       | _ -> tm in
 
@@ -143,7 +143,7 @@ let subst =
     | Abs(v,bod) ->
           let ilist' = filter (not o (vfree_in v) o snd) ilist in
           mk_abs(v,ssubst ilist' bod)
-    | Quote(e,_) -> let newquo = qssubs ilist e in mk_quote newquo
+    | Quote(e) -> let newquo = qssubs ilist e in mk_quote newquo
     | Eval(e,ty) -> mkEvalSubs ilist tm
     | _ -> tm in
   fun ilist ->
