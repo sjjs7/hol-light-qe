@@ -6,7 +6,7 @@ let rec STRING_FETCH tm = match tm with
 	| Comb(Comb(Const("=",_),a),b) when type_of a = mk_type("list",[mk_type ("char",[])]) -> [STRING_EQ_CONV(tm)]
 	| Comb(a,b) -> (STRING_FETCH a) @ (STRING_FETCH b)
 	| Abs(a,b) -> (STRING_FETCH a) @ (STRING_FETCH b)
-	| Quote(e,ty) -> (STRING_FETCH e)
+	| Quote(e) -> (STRING_FETCH e)
 	| Hole(e,ty) -> (STRING_FETCH e)
 	| Eval(e,ty) -> (STRING_FETCH e)
 	| _ -> [];; 
