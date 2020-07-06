@@ -115,8 +115,8 @@ module type Hol_kernel =
       val getTyv : unit -> int
       val QUOTE_TO_CONSTRUCTION_CONV : term -> thm 
       val CONSTRUCTION_TO_QUOTE_CONV : term -> thm
-      val UNQUOTE : term -> thm
-      val UNQUOTE_CONV : term -> thm
+      val HOLE_ABSORB : term -> thm
+      val HOLE_ABSORB_CONV : term -> thm
       val LAW_OF_DISQUO : term -> thm
       val LAW_OF_DISQUO_CONV : term -> thm
       val matchType : hol_type -> term
@@ -332,9 +332,9 @@ let rec type_subst i ty =
     | Const(_,ty) -> ty
     | Comb(s,_) -> (match qcheck_type_of s with Tyapp("fun",[dty;rty]) -> rty | ep_ty -> ep_ty)
     | Abs(Var(_,ty),t) -> Tyapp("fun",[ty;qcheck_type_of t])
-    | Quote(e) -> ep_ty
-    | Hole(e,ty) -> ty
-    | Eval(e,ty) -> ty
+    | Quote(_) -> ep_ty
+    | Hole(_,ty) -> ty
+    | Eval(_,ty) -> ty
     | _ -> failwith "TYPE_OF: Invalid term. You should not see this error under normal use, if you do, the parser has allowed an ill formed term to be created."
 
   let rec type_of = function
@@ -342,9 +342,9 @@ let rec type_subst i ty =
     | Const(_,ty) -> ty
     | Comb(s,_) -> (match type_of s with Tyapp("fun",[dty;rty]) -> rty| ep_ty -> ep_ty)
     | Abs(Var(_,ty),t) -> Tyapp("fun",[ty;type_of t])
-    | Quote(e) -> ep_ty
-    | Hole(e,ty) -> ty
-    | Eval(e,ty) -> ty
+    | Quote(_) -> ep_ty
+    | Hole(_,ty) -> ty
+    | Eval(_,ty) -> ty
     | _ -> failwith "TYPE_OF: Invalid term. You should not see this error under normal use, if you do, the parser has allowed an ill formed term to be created."
 
   (*Internal function to grab the type of an applied function*)
@@ -365,8 +365,8 @@ let rec type_subst i ty =
     | Comb(a,b) -> let ev_a = is_eval_free a in if ev_a = Ok then is_eval_free b else ev_a
     | Abs(a,b) -> let ev_a = is_eval_free a in if ev_a = Ok then is_eval_free b else ev_a
     | Quote(e) -> is_eval_free e
-    | Hole(e,ty) -> is_eval_free e
-    | Eval(e,ty) -> Issue tm 
+    | Hole(e,_) -> is_eval_free e
+    | Eval(_,_) -> Issue tm 
 
   let eval_free tm = (is_eval_free tm = Ok)
 
@@ -376,10 +376,10 @@ let rec type_subst i ty =
     | Var(_,_) -> Ok
     | Const(_,_) -> Ok
     | Comb(a,b) -> let hole_a = is_hole_free a in if hole_a = Ok then is_hole_free b else hole_a
-    | Abs(a,b) -> let hole_a = is_hole_free a in if hole_a = Ok then is_hole_free b else hole_a
+    | Abs(a,b) -> Ok
     | Quote(e) -> is_hole_free e
-    | Hole(e,ty) -> Issue tm
-    | Eval(e,ty) -> is_hole_free e  
+    | Hole(_,_) -> Issue tm
+    | Eval(e,_) -> is_hole_free e  
 
   let hole_free tm = (is_hole_free tm = Ok)
 
@@ -387,22 +387,22 @@ let rec type_subst i ty =
 (* Primitive discriminators.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-  let is_var = function (Var(_,_)) -> true | _ -> false
+  let is_var = function (Var(_)) -> true | _ -> false
 
-  let is_const = function (Const(_,_)) -> true | _ -> false
+  let is_const = function (Const(_)) -> true | _ -> false
 
-  let is_abs = function (Abs(_,_)) -> true | _ -> false
+  let is_abs = function (Abs(_)) -> true | _ -> false
 
-  let is_comb = function (Comb(_,_)) -> true | _ -> false
+  let is_comb = function (Comb(_)) -> true | _ -> false
 
   let is_quote = function (Quote(_)) -> true | _ -> false
 
   let dest_quote =
     function (Quote(e)) -> e | _ -> failwith "dest_quote: not a quotation"
 
-  let is_hole = function (Hole(_,_)) -> true | _ -> false
+  let is_hole = function (Hole(_)) -> true | _ -> false
 
-  let is_eval = function (Eval(_,_)) -> true | _ -> false
+  let is_eval = function (Eval(_)) -> true | _ -> false
 
   let dest_hole = 
     function (Hole(e,ty)) -> e,ty | _ -> failwith "dest_hole: not a hole"
@@ -421,7 +421,7 @@ let rec type_subst i ty =
 
   let mk_abs(bvar,bod) =
     match bvar with
-      Var(_,_) -> Abs(bvar,bod)
+      Var(_) -> Abs(bvar,bod)
     | _ -> failwith "mk_abs: not a variable"
 
   let mk_comb(f,a) =
@@ -496,8 +496,8 @@ let rec type_subst i ty =
     | Abs(bv,bod) -> subtract (frees bod) [bv]
     | Comb(s,t) -> union (frees s) (frees t)
     | Quote(e) -> qfrees e
-    | Hole(e,ty) -> frees e
-    | Eval(e,ty) -> frees e
+    | Hole(e,_) -> frees e
+    | Eval(e,_) -> frees e
 
   let freesl tml = itlist (union o frees) tml []
 
@@ -529,15 +529,15 @@ let rec type_subst i ty =
     let rec qvfree_in v tm = match tm with
       | Hole(e,ty) -> vfree_in v e
       | Comb(l,r) -> qvfree_in v l || qvfree_in v r
-      | Quote(e) -> qvfree_in v e
+      | Quote(e) -> qvfree_in v e 
       | _ -> false
     in
     match tm with
       Abs(bv,bod) -> v <> bv && vfree_in v bod
     | Comb(s,t) -> vfree_in v s || vfree_in v t
-    | Quote(e) -> qvfree_in v e
-    | Hole(e,ty) -> qvfree_in v e
-    | Eval(e,ty) -> vfree_in v e
+    | Quote(e) -> if hole_free e then false else qvfree_in v e
+    | Hole(e,_) -> qvfree_in v e
+    | Eval(e,_) -> vfree_in v e
     | _ -> Pervasives.compare tm v = 0
 
 (* ------------------------------------------------------------------------- *)
@@ -549,14 +549,14 @@ let rec type_subst i ty =
       | Hole(e,_) -> type_vars_in_term e
       | Quote(e) -> qtype_vars_in_term e
       | Comb(l,r) -> union (qtype_vars_in_term l) (qtype_vars_in_term r)
-      | _ -> tyvars (ep_ty)
+      | _ -> []
     in
     function
       Var(_,ty)        -> tyvars ty
     | Const(_,ty)      -> tyvars ty
     | Comb(s,t)        -> union (type_vars_in_term s) (type_vars_in_term t)
     | Abs(Var(_,ty),t) -> union (tyvars ty) (type_vars_in_term t)
-    | Quote(_)         -> []
+    | Quote(e)         -> if hole_free e then [] else qtype_vars_in_term e
     | Hole(e,_)        -> type_vars_in_term e
     | Eval(e,ty)       -> union (type_vars_in_term e) (tyvars ty)
     | _                -> failwith "TYPE_VARS_IN_TERM: Invalid type."
@@ -1138,35 +1138,34 @@ let rec type_subst i ty =
       Sequent([], safe_mk_eq tm (mk_quote(constructionToTerm tm))) 
     else failwith "CONSTRUCTION_TO_QUOTE_CONV"
 
-
-(* These functions remove the holes from a term *) 
-  let rec makeUnquotedQuote = function
+  (* These functions remove the holes from a term *) 
+  let rec absorbFilledHoles = function
     | Const(a,ty) -> Const(a,ty)    
     | Var(a,ty) -> Var(a,ty)
-    | Comb(l,r) -> Comb(makeUnquotedQuote l, makeUnquotedQuote r)
-    | Abs(l,r) -> Abs(makeUnquotedQuote l, makeUnquotedQuote r)
-    | Quote(a) -> let muq = makeUnquotedQuote a in
+    | Comb(l,r) -> Comb(absorbFilledHoles l, absorbFilledHoles r)
+    | Abs(l,r) -> Abs(absorbFilledHoles l, absorbFilledHoles r)
+    | Quote(a) -> let muq = absorbFilledHoles a in
         Quote(muq) 
     | Hole(e,ty) when ((is_quote e) && (type_of (dest_quote e)) = ty) -> (dest_quote e)
     | _ -> failwith "no trivial holes to remove"
 
-  (*Unquote will "cancel" out the hole and quotation operators*)
-  (*ttu = term to unquote -> unquote (Q_ H_ Q_ 3 _Q _H _Q) (Q_ 3 _Q) = Q_ 3 _Q*)
-  let UNQUOTE trm = match trm with
-    | Quote(e) -> Sequent([],safe_mk_eq trm (makeUnquotedQuote trm )) 
-    | _ -> failwith "UNQUOTE: THIS IS NOT A QUOTE"
+  (*HOLE_ABSORB will "cancel" out the hole and quotation operators*)
+  (*For example, (Q_ H_ Q_ 3 _Q _H _Q) = Q_ 3 _Q*)
+  let HOLE_ABSORB trm = match trm with
+    | Quote(e) -> Sequent([],safe_mk_eq trm (absorbFilledHoles trm )) 
+    | _ -> failwith "HOLE_ABSORB: THIS IS NOT A QUOTE"
 
-  (*Convert to automatically unquote any possible quotes in first "layer" of a term, will fail if any holes are not "filled in", use UNQUOTE to unquote specific terms*)
-  let rec UNQUOTE_CONV tm = 
+  (*Convert to automatically HOLE_ABSORB any possible quotes in first "layer" of a term, will fail if any holes are not "filled in"*)
+  let rec HOLE_ABSORB_CONV tm = 
     let rec unqint trm =
       (match trm with
         | Comb(a,b) -> Comb(unqint a, unqint b)
         | Abs(a,b) -> Abs(unqint a, unqint b)
-        | Quote(e) -> let muq = makeUnquotedQuote e in Quote(muq)
-        | Hole(e,ty) -> failwith "UNQUOTE_CONV: Hole outside quotaton"
+        | Quote(e) -> let muq = absorbFilledHoles e in Quote(muq)
+        | Hole(e,ty) -> failwith "HOLE_ABSORB_CONV: Hole outside quotaton"
         | other -> other) in
     let ntm = unqint tm in
-    if tm = ntm then failwith "UNQUOTE_CONV" else
+    if tm = ntm then failwith "HOLE_ABSORB_CONV" else
     Sequent([],safe_mk_eq tm ntm)
 
 
