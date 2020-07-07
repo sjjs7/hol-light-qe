@@ -48,6 +48,8 @@ module type Hol_kernel =
       val aty : hol_type
 
       val constants : unit -> (string * hol_type) list
+      val not_eff : unit -> (term * term) list
+      val addNotEff : thm -> unit 
       val get_const_type : string -> hol_type
       val new_constant : string * hol_type -> unit
       val type_of : term -> hol_type
@@ -141,7 +143,6 @@ module type Hol_kernel =
       val mk_not_effective_in : term -> term -> term -> term
       val mk_effective_in : term -> term -> term -> term
       val stackAbs : (term * term) list -> term -> term
-      val is_proven_thm : term -> bool
       val not_effective_in : term -> term -> bool 
 end;;
 
@@ -292,11 +293,9 @@ let rec type_subst i ty =
 
   let getTyv unit = let () = tyv_num := (!tyv_num + 1) in !tyv_num;;
 
-  let proven_thms = ref [];;
-
-  let is_proven_thm tm = exists (fun thm -> tm = (snd ((fun a -> match a with Sequent(b,c) -> (b,c) | _ -> fail()) thm))) (!proven_thms)
-
   let not_effectives = ref ([]:(term * term) list);;
+
+  let not_eff() = !not_effectives
 
   let not_effective_in var tm = exists (fun (v, t) -> var = v && tm = t) (!not_effectives) 
 
@@ -421,7 +420,7 @@ let rec type_subst i ty =
 
   let mk_abs(bvar,bod) =
     match bvar with
-      Var(_) -> Abs(bvar,bod)
+      Var(_) -> if not (is_hole bod) then Abs(bvar,bod) else failwith "mk_abs: body of an abstraction cannot be a hole"
     | _ -> failwith "mk_abs: not a variable"
 
   let mk_comb(f,a) =
@@ -465,18 +464,13 @@ let rec type_subst i ty =
 (* Add to theorem & not-effective lists                                      *)
 (* ------------------------------------------------------------------------- *)
 
-  let addThm tm = match tm with 
-      | Sequent(asl,c) -> 
-          if (forall (fun a -> is_proven_thm a) asl) then 
-            (match c with 
-              | Comb(Const("!", t1),Abs(v_aux, (Comb(Comb(Const("=", t2), Comb(Abs(var,trm),v_aux')), trm')))) 
+  let addNotEff tm = match tm with 
+      | Sequent(asl,c) ->  
+          (match c with 
+            | Comb(Const("!", t1),Abs(v_aux, (Comb(Comb(Const("=", t2), Comb(Abs(var,trm),v_aux')), trm')))) 
                 when type_of v_aux = type_of var && v_aux = v_aux' && var <> v_aux && trm = trm' ->
-                  begin
-                    not_effectives := (var, trm) :: !not_effectives ; 
-                    proven_thms := tm :: !proven_thms
-                  end    
-              | _ -> proven_thms := tm :: !proven_thms)
-          else failwith "Unproven assumptions in theorem" 
+                not_effectives := (var, trm) :: !not_effectives 
+            | _ -> failwith "Not a NOT-EFFECTIVE-IN theorem")
       | _ -> failwith "Not a theorem";;
 
 (* ------------------------------------------------------------------------- *)
@@ -487,6 +481,7 @@ let rec type_subst i ty =
     let rec qfrees = function
       | Hole(e,ty) -> frees e
       | Comb(l,r) -> union (qfrees l) (qfrees r)
+      | Abs(v,b) -> subtract (qfrees b) [v]
       | Quote(e) -> qfrees e
       | _ -> []
     in
@@ -509,6 +504,7 @@ let rec type_subst i ty =
     let rec qfreesin acc tm = match tm with
       | Hole(e,ty) -> freesin acc e
       | Comb(l,r) -> qfreesin acc l && qfreesin acc r
+      | Abs(v,b) -> qfreesin (v::acc) b
       | Quote(e) -> qfreesin acc e
       | _ -> true
     in
@@ -529,6 +525,7 @@ let rec type_subst i ty =
     let rec qvfree_in v tm = match tm with
       | Hole(e,ty) -> vfree_in v e
       | Comb(l,r) -> qvfree_in v l || qvfree_in v r
+      | Abs(var,b) -> v <> var && qvfree_in v b 
       | Quote(e) -> qvfree_in v e 
       | _ -> false
     in
@@ -549,6 +546,7 @@ let rec type_subst i ty =
       | Hole(e,_) -> type_vars_in_term e
       | Quote(e) -> qtype_vars_in_term e
       | Comb(l,r) -> union (qtype_vars_in_term l) (qtype_vars_in_term r)
+      | Abs(_,b) -> qtype_vars_in_term b
       | _ -> []
     in
     function
@@ -612,7 +610,7 @@ let rec type_subst i ty =
       (*Function to handle substitutions in holes in quotations*)
       let rec holeSub ilist tm =
         match tm with 
-          | Abs(v,s) -> Abs(holeSub ilist v, holeSub ilist s)
+          | Abs(v,s) -> Abs(v, holeSub ilist s)
           | Comb(f,a) -> Comb(holeSub ilist f, holeSub ilist a)
           | Quote(e) -> Quote(holeSub ilist e)
           | Hole(e,t) when not (is_quote e) -> Hole(vsubst ilist e, t)
@@ -1090,7 +1088,7 @@ let rec type_subst i ty =
       |  Comb(exp1, exp2) -> makeAppComb (termToConstruction exp1) (termToConstruction exp2)
       |  Abs(exp1, exp2) -> makeAbsComb (termToConstruction exp1) (termToConstruction exp2)
       |  Quote(e) when type_of e = ep_ty -> makeQuoComb (termToConstruction e)
-      |  Hole(e,t) when type_of (termToConstruction e) = t -> termToConstruction e
+      |  Hole(e,t) -> failwith "Terms with holes cannot be made into constructions"
       |  _ -> failwith "Malformed term cannot be made into a construction"
 
   let rec constructionToTerm = function
@@ -1113,11 +1111,13 @@ let rec type_subst i ty =
 (* ------------------------------------------------------------------------ *)
 
   let LAW_OF_QUO tm = match tm with
-    | Var(_,_) | Const(_,_) | Comb(_,_) | Abs(_,_) | Quote(_) | Hole(_,_) -> 
+    | Var(_) | Const(_) | Comb(_) | Abs(_) | Quote(_) | Hole(_) -> 
         (match is_eval_free tm with 
-          | Ok -> Sequent([],safe_mk_eq (mk_quote tm) (termToConstruction tm))
+          | Ok -> (match is_hole_free tm with 
+                    | Ok -> Sequent([],safe_mk_eq (mk_quote tm) (termToConstruction tm))
+                    | Issue t -> raise (Problem("LAW_OF_QUO- Cannot have a constrution of a hole. This term contains one:", t)))
           | Issue t -> raise (Problem("LAW_OF_QUO- Cannot quote terms with evaluations. This term contains one:", t)))
-    | Eval(_,_) -> failwith "LAW_OF_QUO: Cannot quote an evaluation" 
+    | Eval(_) -> failwith "LAW_OF_QUO: Cannot quote an evaluation" 
 
   let LAW_OF_QUO_CONV = LAW_OF_QUO 
 
@@ -1144,8 +1144,7 @@ let rec type_subst i ty =
     | Var(a,ty) -> Var(a,ty)
     | Comb(l,r) -> Comb(absorbFilledHoles l, absorbFilledHoles r)
     | Abs(l,r) -> Abs(absorbFilledHoles l, absorbFilledHoles r)
-    | Quote(a) -> let muq = absorbFilledHoles a in
-        Quote(muq) 
+    | Quote(a) -> Quote(absorbFilledHoles a) 
     | Hole(e,ty) when ((is_quote e) && (type_of (dest_quote e)) = ty) -> (dest_quote e)
     | _ -> failwith "no trivial holes to remove"
 
