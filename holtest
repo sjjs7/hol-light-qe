@@ -28,6 +28,17 @@ else
     hollight="ocaml -I `camlp5 -where` camlp5o.cma -init hol.ml"
 fi
 
+
+# Construction files
+echo '### Loading Constructions/ConstructionTactics.ml'; echo 'loadt "Constructions/ConstructionTactics.ml";;' | (time $hollight)
+echo '### Loading Constructions/epsilon.ml'; echo 'loadt "Constructions/epsilon.ml";;' | (time $hollight)
+echo '### Loading Constructions/Induction_Schema_Example.ml'; echo 'loadt "Constructions/Induction_Schema_Example.ml";;' | (time $hollight)
+echo '### Loading Constructions/LEM_Example.ml'; echo 'loadt "Constructions/LEM_Example.ml";;' | (time $hollight)
+echo '### Loading Constructions/pseudoquotation.ml'; echo 'loadt "Constructions/pseudoquotation.ml";;' | (time $hollight)
+echo '### Loading Constructions/QuotationOperatorTests.ml'; echo 'loadt "Constructions/QuotationOperatorTests.ml";;' | (time $hollight)
+echo '### Loading Constructions/QuotationTactics.ml'; echo 'loadt "Constructions/QuotationTactics.ml";;' | (time $hollight)
+
+
 # Standalone examples
 
 echo '### Loading Library/agm.ml'; echo 'loadt "Library/agm.ml";;' | (time $hollight)
