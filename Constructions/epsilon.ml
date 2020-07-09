@@ -60,7 +60,10 @@ let isAbs = define `isAbs e = ((ep_constructor e) = "Abs")`;;
 let isApp = define `isApp e = ((ep_constructor e) = "App")`;;
 
 (*Checks if a given type is a function using a much cleaner method*)
-let isFunction = define `isFunction ty = (?a0 a1. ty = (TyBiCons "fun" a0 a1))`;; 
+let isFunction = define `(isFunction (TyVar str) = F) /\
+						 (isFunction (TyBase str) = F) /\
+						 (isFunction (TyMonoCons str ty) = F) /\
+						 (isFunction (TyBiCons str ty1 ty2) = (str = "fun"))`;; 
 
 (*This function will take a variable term, and another term of type epsilon, and return whether or not the types mismatch. If the term is not found, false is returned.
 i.e. true means that two variables of the same name but different types exist inside these terms*)
@@ -588,7 +591,7 @@ prove(`isExprType (Quo ((App (QuoConst "+" (TyBiCons "fun" (TyBase "num") (TyBiC
 
 (*
 This is another proof that doesn't seem to work automatically - however - it does not seem possible to prove this theorem as true as it requires applying stripFunc to a base type, so it still seems to work.
-prove(`isExprType (Quo(App (QuoConst "2" (TyBase "num")) (QuoConst "3" (TyBase "num")))) (TyBiCons "fun" (TyBase "bool") (TyBase "num")) <=> F`,
+prove(`isExprType (Quo(App (QuoConst "_0" (TyBase "num")) (QuoConst "_0" (TyBase "num")))) (TyBiCons "fun" (TyBase "bool") (TyBase "num")) <=> F`,
 	REWRITE_TAC[isExprType] THEN
 	REWRITE_TAC[isExpr] THEN
 	REWRITE_TAC[combinatoryType] THEN
