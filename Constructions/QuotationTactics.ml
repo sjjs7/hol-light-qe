@@ -15,10 +15,10 @@ let rec STRING_FETCH tm = match tm with
 let (STRING_FETCH_TAC: tactic) = fun (asm,gl) -> PURE_REWRITE_TAC (STRING_FETCH gl) (asm,gl);;
 
 
-let (QUOTE_TO_CONSTRUCTION_TAC: tactic) = fun (asm,gl) -> PURE_REWRITE_TAC[QUOTE_TO_CONSTRUCTION_CONV gl] (asm,gl);;  
-let (CONSTRUCTION_TO_QUOTE_TAC: tactic) = fun (asm,gl) -> PURE_REWRITE_TAC[CONSTRUCTION_TO_QUOTE_CONV gl] (asm,gl);; 
-let (HOLE_ABSORB_TAC: tactic) = fun (asm,gl) -> PURE_REWRITE_TAC[HOLE_ABSORB_CONV gl] (asm,gl);;  
-let (LAW_OF_DISQUO_TAC : tactic) = fun (asm,gl) -> PURE_REWRITE_TAC[LAW_OF_DISQUO_CONV gl] (asm,gl);;
+let (QUOTE_TO_CONSTRUCTION_TAC: tactic) = fun (asm,gl) -> CONV_TAC(QUOTE_TO_CONSTRUCTION_CONV) (asm,gl);;  
+let (CONSTRUCTION_TO_QUOTE_TAC: tactic) = fun (asm,gl) -> CONV_TAC(CONSTRUCTION_TO_QUOTE_CONV) (asm,gl);; 
+let (HOLE_ABSORB_TAC: tactic) = fun (asm,gl) -> CONV_TAC(HOLE_ABSORB_CONV) (asm,gl);;  
+let (LAW_OF_DISQUO_TAC : tactic) = fun (asm,gl) -> CONV_TAC(LAW_OF_DISQUO_CONV) (asm,gl);;
 let (LAW_OF_QUO_TAC : tactic) = fun (asm,gl) -> PURE_REWRITE_TAC[LAW_OF_QUO_CONV gl] (asm,gl);;
 (*These tactics do the same as their original counterparts, but make use of the assumptions in the goal stack*)
 let (ASM_QUOTE_TO_CONSTRUCTION_TAC: tactic) = fun (asm,gl) -> PURE_ASM_REWRITE_TAC[QUOTE_TO_CONSTRUCTION_CONV gl] (asm,gl);;  
