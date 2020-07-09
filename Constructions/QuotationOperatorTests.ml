@@ -43,41 +43,28 @@ try `Q_ H_ Q_ x + 3 _Q _H /\ T _Q` with Failure _ -> `HOLE_MISTYPE_TEST_SUCCESS:
 
 (*For testing, defines a function that takes an integer and recursively adds quotations until n is 0*)
 let testFun = define `
-    (testFun 0 = Q_ 0 _Q) /\
-    (testFun (n + 1) = (Q_ H_ testFun(n) _H _Q))
-`;;
+    (testFun 0 = Q_ Q_ _0 _Q  _Q) /\
+    (testFun (n + 1) = (Q_ testFun(n) _Q))`;;
 
 let testFun2 = define `
-    (testFun2 0 = Q_ 0 _Q) /\
-    (testFun2 (n + 1) = (Q_ 2 + H_ testFun2(n) _H _Q))`;;
-
-(*Combinator to make recursive proofs cleaner, works when a function takes one natural number argument*)
-let rec genRecursiveProof def fname step num stop = 
-	if num < 0 then failwith "Non-stop recursion" else 
-	let genfun = mk_comb(mk_const(fname,[]),mk_numeral (Int num)) in
-	if num > stop then
-	let subone = mk_comb(mk_const(fname,[]),mk_comb(mk_comb(mk_const("+",[]),mk_numeral (Int (num - 1))),mk_numeral(Int(1)))) in
-	REWRITE_TAC[REWRITE_CONV[ARITH_RULE (mk_eq (genfun,subone))] genfun] THEN
-	REWRITE_TAC[def] THEN
-	(genRecursiveProof def fname step (num-step) stop)
-    else
-    if num = stop then
-	REWRITE_TAC[def]
-    else
-    failwith "Step overshoots stopping point";;
+    (testFun2 0 = Quo(Quo(QuoConst "_0" (TyBase "num")))) /\
+    (testFun2 (n + 1) = Quo(testFun2(n)))`;;
 
 
 (*This tests that unquote tactics work even on long winded recursive functions*)
-prove(`testFun 10 = Q_ 0 _Q`,
-    (genRecursiveProof testFun "testFun" 1 10 0) THEN
-    REPEAT UNQUOTE_TAC THEN
+prove(`eval testFun 0 to epsilon = eval testFun2 0 to epsilon`,
+    REWRITE_TAC[testFun; testFun2] THEN 
+    CONSTRUCTION_TO_QUOTE_TAC THEN 
     REFL_TAC
 );;
 
-prove(`testFun2 10 = Q_ 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 2 + 0 _Q`,
-    (genRecursiveProof testFun2 "testFun2" 1 10 0) THEN
-    REPEAT UNQUOTE_TAC THEN
-    REFL_TAC
+let n_notEff = not_free_abs_not_effective `n:num` `\n:num. eval testFun n to epsilon = eval testFun2 n to epsilon` `m:num`;;
+addNotEff n_notEff;;
+
+prove(`!n:num. eval testFun n to epsilon = eval testFun2 n to epsilon`,
+   INDUCT_TAC THEN
+
+   REWRITE_TAC[testFun]; 
 );;
 
 (*This tests that STRING_FETCH_TAC works as it should*)
