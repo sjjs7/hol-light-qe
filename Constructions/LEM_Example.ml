@@ -1,4 +1,4 @@
-needs "Constructions/epsilon.ml";;
+needs "Constructions/QuotationTactics.ml";;
 (* Law of excluded middle (LEM) *)
 
 let lem = prove(`!x:epsilon. isExprType x (TyBase "bool") ==> ((eval x to bool) \/ ~(eval x to bool))`,
@@ -138,6 +138,33 @@ INST [`Q_ (0 = 0) _Q`,`x:epsilon`] lem;;
 	);;
 
 
+	(* Alternative LEM formula (with holes) *)
+
+let holed_lem = prove(`!x:epsilon. (isExprType x (TyBase "bool") /\ (?y:bool. x = (Q_ y _Q)) ==> 
+						((eval Q_ H_ x _H of bool \/ ~ (H_ x _H of bool) _Q to bool)))`,
+				GEN_TAC THEN
+				REWRITE_TAC[] THEN 
+				REWRITE_TAC[IMP_CONJ] THEN 
+				REPEAT(DISCH_TAC) THEN  
+				ASM_REWRITE_TAC[] THEN 
+				HOLE_ABSORB_TAC THEN 
+				REWRITE_TAC[LAW_OF_DISQUO `y:bool \/ ~y`] THEN 
+				REWRITE_TAC[SPEC `y:bool` EXCLUDED_MIDDLE]);;
 
 
+let holed_lem = prove(`!x:epsilon. (isExprType x (TyBase "bool") ==> 
+						((eval Q_ H_ x _H of bool \/ ~ (H_ x _H of bool) _Q to bool)))`,
+						GEN_TAC THEN 
+						QUOTE_TO_CONSTRUCTION_TAC THEN
+						DISCH_TAC THEN  
+						REWRITE_TAC[APP_DISQUO_CONV (termToConstruction (`(\/) (x:bool)`)) (termToConstruction `~ (x:bool)`)] THEN
+						REWRITE_TAC[APP_DISQUO_CONV (termToConstruction (`~`)) (termToConstruction `x:bool`)] THEN
+						REWRITE_TAC[APP_DISQUO_CONV (termToConstruction `\/`) (termToConstruction `x:bool`)] THEN
+						REWRITE_TAC[CONSTRUCTION_TO_QUOTE_CONV `QuoConst "\\/" (TyBiCons "fun" (TyBase "bool") (TyBiCons "fun" (TyBase "bool") (TyBase "bool")))`] THEN 
+						REWRITE_TAC[CONSTRUCTION_TO_QUOTE_CONV `(QuoConst "~" (TyBiCons "fun" (TyBase "bool") (TyBase "bool")))`] THEN
+						REWRITE_TAC[LAW_OF_DISQUO `\/`] THEN 
+						REWRITE_TAC[LAW_OF_DISQUO `~`] THEN 
+						ASM_REWRITE_TAC[EXCLUDED_MIDDLE]);;
+
+				
 
