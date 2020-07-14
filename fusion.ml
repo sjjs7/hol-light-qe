@@ -95,10 +95,7 @@ module type Hol_kernel =
       val dest_thm : thm -> term list * term
       val hyp : thm -> term list
       val concl : thm -> term
-      val orda: (term * term) list -> term -> term -> int
-      val mk_is_expr_thm : hol_type -> term -> thm 
-      val mk_free_in_thm : term -> term -> thm
-      val not_free_abs_not_effective : term -> term -> term -> thm 
+      val orda: (term * term) list -> term -> term -> int 
       val REFL : term -> thm
       val LAW_OF_QUO : term -> thm
       val LAW_OF_QUO_CONV : term -> thm
@@ -118,8 +115,13 @@ module type Hol_kernel =
       val new_basic_type_definition :
               string -> string * string -> thm -> thm * thm
       val getTyv : unit -> int
+      val construction_type : term -> term 
+      val termToConstruction : term -> term 
+      val constructionToTerm : term -> term 
       val QUOTE_TO_CONSTRUCTION_CONV : term -> thm 
       val CONSTRUCTION_TO_QUOTE_CONV : term -> thm
+      val CONSTRUCTION_TO_TERM_CONV : term -> thm 
+      val TERM_TO_CONSTRUCTION_CONV : term -> thm 
       val HOLE_ABSORB : term -> thm
       val HOLE_ABSORB_CONV : term -> thm
       val LAW_OF_DISQUO : term -> thm
@@ -772,7 +774,7 @@ let rec type_subst i ty =
           let c = Pervasives.compare ty1 ty2 in
           if c <> 0 then c else orda ((x1,x2)::env) t1 t2
     | Quote(e1),Quote(e2) -> orda env e1 e2
-    | Hole(e1,_),Hole(e2,_) -> orda env e1 e2
+    | Hole(e1,t1),Hole(e2,t2) when t1 = t2 -> orda env e1 e2
     | Eval(e1,t1),Eval(e2,t2) when t1 = t2 -> orda env e1 e2 
     | Const(_,_),_ -> -1
     | _,Const(_,_) -> 1
@@ -945,7 +947,7 @@ let rec type_subst i ty =
                     (*What to do when there is a variable substitution*)
                     let asl, c = dest_thm (nConv conv e) in
                     let ls,rs = dest_eq c in
-                    Sequent (asl, safe_mk_eq (mk_eval (ls,type_of ls)) (mk_eval (rs,type_of rs)))
+                    Sequent (asl, safe_mk_eq (mk_eval (ls,ty)) (mk_eval (rs,ty)))
     | _ -> failwith "QSUB_CONV"
 
   (*Conversion function to handle hole rewrites on a lower level*)
@@ -1041,6 +1043,21 @@ let rec type_subst i ty =
   let makeFunComb a b = makeTyBiConsComb "fun" a b;;
   let makeQuoComb a = Comb(Const("Quo",(makeHolFunction (ep_ty) (ep_ty))),a);;
 
+  let rec construction_type tm = 
+    let strip_func tm =
+      match tm with 
+        | Comb(Comb(Comb(Const("TyBiCons",ty),tyName),ty1),ty2) -> ty2
+        | _ -> failwith "not a function type!"
+    in
+    match tm with 
+      | Comb(Comb(Const("QuoVar",ty),vname),vty) -> vty
+      | Comb(Comb(Const("QuoConst", ty), cname), cty) -> cty
+      | Comb(Const("Quo", ty), e) -> makeTyBaseComb "epsilon"
+      | Comb(Comb(Const("App", ty), func), arg) -> strip_func (construction_type func)
+      | Comb(Comb(Const("Abs", ty), var), body) ->
+            Comb((makeGenericComb "TyBiCons" (makeHolFunction (makeHolType "list" [makeHolType "char" []]) (makeHolFunction (makeHolType "type" []) (makeHolFunction (makeHolType "type" []) (makeHolType "type" [])))) (tmp_mk_string (explode "fun")) (construction_type var)),construction_type body)
+      | _ -> failwith "Not a proper construction." 
+
 (* type -> term (used in termToConstruction) *)
   let rec matchType ty = 
       if (is_vartype ty) then makeTyVarComb (dest_vartype ty) else
@@ -1091,8 +1108,13 @@ let rec type_subst i ty =
       |  Comb(exp1, exp2) -> makeAppComb (termToConstruction exp1) (termToConstruction exp2)
       |  Abs(exp1, exp2) -> makeAbsComb (termToConstruction exp1) (termToConstruction exp2)
       |  Quote(e) -> makeQuoComb (termToConstruction e)
-      |  Hole(e,t) -> failwith "Terms with holes cannot be made into constructions"
+      |  Hole(Var(vName,_),ty) -> makeQuoVarComb vName (matchType ty)
       |  _ -> failwith "Malformed term cannot be made into a construction"
+
+  let TERM_TO_CONSTRUCTION_CONV tm = 
+    let termToCon = termToConstruction tm in 
+    if termToCon = tm then failwith "TERM_TO_CONSTRUCTION_CONV: Already a construction."
+    else Sequent([], safe_mk_eq tm termToCon)
 
   let rec constructionToTerm = function
       | Comb(Comb(Const("QuoConst",_),strList),tyConv) ->
@@ -1105,6 +1127,21 @@ let rec type_subst i ty =
       | Comb(Const("Quo",_),t) -> mk_quote(constructionToTerm t)
       | _ -> failwith "constructionToTerm: not a proper construction"
 
+  let CONSTRUCTION_TO_TERM_CONV tm = 
+    let rec ctt trm = 
+      match trm with
+        | Comb(f,a) -> 
+          if can constructionToTerm trm then constructionToTerm trm else Comb(ctt f, ctt a)
+        | Abs(v,b) -> Abs(ctt v, ctt b) 
+        | Eval(e,ty) -> Eval(ctt e, ty)
+        | Quote(e) -> Quote(ctt e) 
+        | _ -> trm
+    in 
+    let conToTerm = ctt tm in 
+    if conToTerm = tm then failwith "CONSTRUCTION_TO_TERM_CONV: No constructions in term."
+    else Sequent([], safe_mk_eq tm conToTerm)
+
+
   let is_proper_construc c = can constructionToTerm c 
 
   let proper_e_term tm = is_proper_construc tm || is_quote tm
@@ -1116,9 +1153,7 @@ let rec type_subst i ty =
   let LAW_OF_QUO tm = match tm with
     | Var(_) | Const(_) | Comb(_) | Abs(_) | Quote(_) | Hole(_) -> 
         (match is_eval_free tm with 
-          | Ok -> (match is_hole_free tm with 
-                    | Ok -> Sequent([],safe_mk_eq (mk_quote tm) (termToConstruction tm))
-                    | Issue t -> raise (Problem("LAW_OF_QUO- Cannot have a constrution of a hole. This term contains one:", t)))
+          | Ok -> Sequent([],safe_mk_eq (mk_quote tm) (termToConstruction tm))
           | Issue t -> raise (Problem("LAW_OF_QUO- Cannot quote terms with evaluations. This term contains one:", t)))
     | Eval(_) -> failwith "LAW_OF_QUO: Cannot quote an evaluation" 
 
@@ -1134,7 +1169,7 @@ let rec type_subst i ty =
         | Comb(f,a) -> Comb(qtc f, qtc a)
         | Abs(v,b) -> Abs(qtc v, qtc b) 
         | Eval(e,ty) -> Eval(qtc e, ty)
-        | Quote(e) -> termToConstruction trm 
+        | Quote(e) -> termToConstruction e 
         | _ -> trm
     in 
     let qToCon = qtc tm in 
@@ -1145,7 +1180,7 @@ let rec type_subst i ty =
   let CONSTRUCTION_TO_QUOTE_CONV tm =
     let rec ctq trm =  
       match trm with 
-        | Comb(f,a) -> if can constructionToTerm trm then constructionToTerm trm
+        | Comb(f,a) -> if can constructionToTerm trm then Quote(constructionToTerm trm)
                        else Comb(ctq f, ctq a)
         | Abs(v,b) -> Abs(v, ctq b)
         | Eval(e,ty) -> if can constructionToTerm e then Eval(constructionToTerm e, ty)
@@ -1180,6 +1215,7 @@ let rec type_subst i ty =
         | Abs(a,b) -> Abs(unqint a, unqint b)
         | Quote(e) -> let muq = absorbFilledHoles e in Quote(muq)
         | Hole(e,ty) -> failwith "HOLE_ABSORB_CONV: Hole outside quotaton"
+        | Eval(e,ty) -> Eval(unqint e, ty)
         | other -> other) in
     let ntm = unqint tm in
     if tm = ntm then failwith "HOLE_ABSORB_CONV" else
@@ -1224,10 +1260,10 @@ let rec type_subst i ty =
   (* Axiom B10, (B10.1 and 10.2 are subsumed by the LAW OF DISQUOTATION.) *)
 
   let QUO_DISQUO tm = 
-    if proper_e_term tm then  
+    if type_of tm = ep_ty then  
       let iet = Comb(Comb(is_expr_ty,tm),matchType (ep_ty)) in
       Sequent([],(internal_make_imp iet (safe_mk_eq (Eval(Comb(Const("Quo",makeHolFunction (ep_ty) (ep_ty)),tm),ep_ty)) tm )))
-    else failwith "QUO_DISQUO"
+    else failwith "QUO_DISQUO: term must be of type epsilon"
 
   let ABS_DISQUO var tm = 
     let mk_thm var vT tm tT = 
@@ -1244,12 +1280,12 @@ let rec type_subst i ty =
 
 
   let APP_DISQUO tm1 tm2 = 
-    if (not (proper_e_term tm1)) or (not (proper_e_term tm2)) then failwith "APP_DISQUO: not proper epsilon terms" 
+    if (not (type_of tm1 = ep_ty)) or (not (type_of tm2 = ep_ty)) then failwith "APP_DISQUO: terms must be of type epsilon" 
     else 
       let ty1 = (if is_quote tm1 then type_of (dest_quote tm1) 
-                 else type_of (constructionToTerm tm1)) in
+                 else revTypeMatch(construction_type tm1)) in
       let ty2 = (if is_quote tm2 then type_of (dest_quote tm2)
-                 else type_of (constructionToTerm tm2)) in 
+                 else revTypeMatch(construction_type tm2)) in 
       if fst(dest_type ty1) = "fun" && hd (snd (dest_type ty1)) = ty2 then 
         let iet1 =  Comb(Comb(is_expr_ty,tm1),matchType ty1) in
         let iet2 =  Comb(Comb(is_expr_ty,tm2),matchType ty2) in
@@ -1257,6 +1293,7 @@ let rec type_subst i ty =
         let conclud = safe_mk_eq (Eval(Comb(Comb(Const("App",makeHolFunction (ep_ty) (makeHolFunction (ep_ty) (ep_ty))),tm1),tm2),last (snd (dest_type ty1)))) (Comb(Eval(tm1,ty1),Eval(tm2,ty2))) in
         Sequent([], internal_make_imp anticed conclud)
       else failwith "APP_DISQUO: terms mismatch"
+
 
   (*Axiom B11.1 is subsumed by the BETA rule. *)
 
@@ -1278,27 +1315,13 @@ let rec type_subst i ty =
                      (matchType beta)) in
       let ifi = Comb(Const("~",boolToBool),
                      Comb(Comb(Const("isFreeIn",epsilonToEpsilonToBool),
-                               mk_quote(var)),
+                               termToConstruction var),
                           lambdaApp)) in
       let lhs = Comb(Abs(var,Eval(body,beta)),arg) in
       let rhs = Eval(lambdaApp,beta) in
       let antecedent = internal_make_conj iet ifi in
       let succedent = safe_mk_eq lhs rhs in
       Sequent([], internal_make_imp antecedent succedent)
-
-  let mk_is_expr_thm ty tm = 
-  let epsilonToTypeToBool = Tyapp ("fun",[(ep_ty);(Tyapp ("fun",[(Tyapp ("type",[]));(bool_ty)]))]) in
-   match tm with 
-    | Comb(Abs(v,b),a) when type_of b = ep_ty ->
-        if is_quote b then 
-          if type_of (dest_quote b) = ty then 
-            Sequent([], Comb(Comb(Const("isExprType",epsilonToTypeToBool), tm), (matchType ty)))
-          else failwith "This term is not of the requested type."
-        else let ctt = constructionToTerm b in 
-          if type_of ctt = ty then 
-            Sequent([], Comb(Comb(Const("isExprType",epsilonToTypeToBool), tm), (matchType ty)))
-          else failwith "This term is not of the requested type."
-    | _ -> failwith "term must be a combination of type epsilon."
 
 
   (* Constructs a NOT-EFFECTIVE-IN term. *)
@@ -1316,28 +1339,6 @@ let rec type_subst i ty =
 
   (* Constructs an EFFECTIVE-IN term *)
   let mk_effective_in var tm var_aux = Comb(Const("~",makeHolFunction bool_ty bool_ty),(mk_not_effective_in var tm var_aux))
-
-
-  (* Free var & Not-Effective-In related conversions *)
-
-  let mk_free_in_thm var tm = 
-    match tm with 
-      | Comb(f,a) when is_abs f -> 
-        if type_of(snd(dest_abs f)) = ep_ty then 
-          let boolToBool = Tyapp ("fun",[(bool_ty);(bool_ty)]) in
-          let epsilonToEpsilonToBool = Tyapp ("fun",[(ep_ty);(Tyapp ("fun",[(ep_ty);(bool_ty)]))]) in
-          if not (vfree_in var tm) 
-           then Sequent([], Comb(Const("~",boolToBool), Comb(Comb(Const("isFreeIn",epsilonToEpsilonToBool), mk_quote(var)), tm)))
-          else failwith "Variable is free in term!"
-        else failwith "Term must be a combination of type epsilon!"
-      | _ -> failwith "Term must be a combination whose first arg is an abstraction." 
-
-  let not_free_abs_not_effective var tm var_aux =
-    match tm with 
-      | Abs(v,b) -> 
-          if var = v then Sequent([], mk_not_effective_in var tm var_aux)
-          else failwith "variable must be bound in abstraction"
-      | _ -> failwith "term must be an abstraction" 
 
 
   (*Axiom B12*)
