@@ -47,12 +47,18 @@ let IS_EXPR_TYPE_CONV tm =
 				    REWRITE_TAC[headFunc; isFunction;stripFunc] THEN
 				    REWRITE_TAC[typeInjective] THEN
 				    STRING_FETCH_TAC THEN
-				    REWRITE_TAC[])
+				    ASM_REWRITE_TAC[])
+
+(* Tactic to prove isFreeIn theorems *)
+let IS_FREE_IN_TAC = 
+	ASM_REWRITE_TAC[isFreeIn] THEN 
+	STRING_FETCH_TAC THEN
+	REWRITE_TAC[] 
 
 (* Tactic to prove isExprType theorems *)
 let IS_EXPR_TYPE_TAC = 
-	REWRITE_TAC[isExprType] THEN
-	REWRITE_TAC[isExpr; combinatoryType] THEN
+	ASM_REWRITE_TAC[isExprType] THEN
+	ASM_REWRITE_TAC[isExpr; combinatoryType] THEN
 	REWRITE_TAC[isConst; isApp; isAbs;isVar] THEN 
     REWRITE_TAC[typeMismatch] THEN
     REWRITE_TAC[ep_constructor] THEN
@@ -140,26 +146,46 @@ let ABS_OF_EVAL_TO_EVAL_ABS_CONV tm =
 (* Creates theorem: eval Quo A to epsilon = A when it is known A is a proper construction *)
 let QUO_DISQUO_CONV tm = 
 	match type_of tm with 
-	  | Tyapp("epsilon", []) when is_quote tm ->
+	  | Tyapp("epsilon", []) ->
 		  (prove(rand(concl(QUO_DISQUO tm)), 
-		  MP_TAC(QUO_DISQUO tm) THEN
-		  QUOTE_TO_CONSTRUCTION_TAC THEN
-		  IS_EXPR_TYPE_TAC))
-	  | Tyapp("epsilon", []) when not (is_quote tm) -> 
-	  	  (prove(rand(concl(QUO_DISQUO tm)), 
 		  MP_TAC(QUO_DISQUO tm) THEN
 		  IS_EXPR_TYPE_TAC))
 	  | _ -> failwith "Term must be of type epsilon." 
 
-(* Creates theorem [ eval app tm1 tm2 to beta = (eval tm1 to alpha -> beta)(eval tm2 to alpha) ] *)
-let APP_DISQUO_CONV tm1 tm2 = 
-	match type_of tm1 with 
-	  | Tyapp("epsilon", []) -> 
+let QUO_DISQUO_TAC = CONV_TAC(TOP_DEPTH_CONV(TRY_CONV QUO_DISQUO_CONV))
+
+(* Creates theorem: eval app tm1 tm2 to beta = (eval tm1 to alpha -> beta)(eval tm2 to alpha) *)
+let app_disquo_thm tm1 tm2 = 
+	match type_of tm1, type_of tm2 with 
+	  | Tyapp("epsilon",[]),Tyapp("epsilon",[]) -> 
 	  		(prove(rand(concl(APP_DISQUO tm1 tm2)),
 	  		MP_TAC(APP_DISQUO tm1 tm2) THEN
-	  		TRY QUOTE_TO_CONSTRUCTION_TAC THEN
-	  		IS_EXPR_TYPE_TAC))
-	  | _ -> failwith "Terms must of of type epsilon!"
+	  		IS_EXPR_TYPE_TAC THEN
+	  		DISCH_TAC THEN
+	  		ASM_REWRITE_TAC[]))
+	  | _ -> failwith "Type mismatch!"
+
+let APP_DISQUO_CONV tm = match tm with 
+	| Eval(Comb(Comb(Const("App",_),t1),t2),_) -> app_disquo_thm t1 t2
+    | _ -> failwith "Not applicable" 
+
+let APP_DISQUO_TAC = REPEAT(CONV_TAC(ONCE_DEPTH_CONV APP_DISQUO_CONV))
+
+let eval_beta_red_thm var arg body beta = 
+	prove(rand(concl(BETA_REDUCE_EVAL var arg body beta)), 
+	MP_TAC(BETA_REDUCE_EVAL var arg body beta) THEN 
+	REWRITE_TAC[] THEN 
+	TRY HOLE_ABSORB_TAC THEN 
+	TRY QUOTE_TO_CONSTRUCTION_TAC THEN 
+	IS_EXPR_TYPE_TAC THEN 
+	IS_FREE_IN_TAC);;
+
+let EVAL_BETA_RED_CONV tm = match tm with 
+	| Comb(Abs(v,Eval(e,ty)),arg) ->  eval_beta_red_thm v arg e ty 
+	| _ -> failwith "Not applicable"
+
+let EVAL_BETA_RED_TAC = REPEAT(CONV_TAC(ONCE_DEPTH_CONV EVAL_BETA_RED_CONV))
+
 
 
 
