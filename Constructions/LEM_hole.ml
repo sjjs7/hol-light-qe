@@ -30,8 +30,6 @@ let holed_lem =
 
 let stmt = `Q_ (?n:num. !m:num. n > m) _Q`;;
 
-SPEC stmt holed_lem
-
 (* Here is the trivial substution *)
 concl(SPEC stmt holed_lem) = 
 `isExprType Q_ (?n. !m. n > m) _Q (TyBase "bool") ==> (\x. (eval (Q_ (H_ (x) _H of bool \/ ~H_ (x) _H of bool) _Q) to (bool))) Q_ (?n. !m. n > m) _Q`;;
