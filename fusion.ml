@@ -1055,7 +1055,7 @@ let rec type_subst i ty =
       | Comb(Const("Quo", ty), e) -> makeTyBaseComb "epsilon"
       | Comb(Comb(Const("App", ty), func), arg) -> strip_func (construction_type func)
       | Comb(Comb(Const("Abs", ty), var), body) ->
-            Comb((makeGenericComb "TyBiCons" (makeHolFunction (makeHolType "list" [makeHolType "char" []]) (makeHolFunction (makeHolType "type" []) (makeHolFunction (makeHolType "type" []) (makeHolType "type" [])))) (tmp_mk_string (explode "fun")) (construction_type var)),construction_type body)
+          Comb((makeGenericComb "TyBiCons" (makeHolFunction (makeHolType "list" [makeHolType "char" []]) (makeHolFunction (makeHolType "type" []) (makeHolFunction (makeHolType "type" []) (makeHolType "type" [])))) (tmp_mk_string (explode "fun")) (construction_type var)),construction_type body)
       | _ -> failwith "Not a proper construction." 
 
 (* type -> term (used in termToConstruction) *)
@@ -1089,13 +1089,13 @@ let rec type_subst i ty =
                 if (type_vars_in_term polyTm) = [] then (polyTm = tm)
                 else match (tyVar, tyApp) with
                   | (Tyapp(tyName, [x]), Tyapp(appName, [y])) when (tyName = appName) && not (is_defined_type x) -> 
-                    occuranceOf polyTm tm (x, y) 
+                      occuranceOf polyTm tm (x, y) 
                   | (Tyapp (tyName, [x1;x2]), Tyapp(appName, [y1;y2])) when (tyName = appName) ->
-                    if not (is_defined_type x1) then occuranceOf polyTm tm (x1, y1)
-                    else if not (is_defined_type x2) then occuranceOf polyTm tm (x2, y2)
-                    else polyTm = tm
+                      if not (is_defined_type x1) then occuranceOf polyTm tm (x1, y1)
+                      else if not (is_defined_type x2) then occuranceOf polyTm tm (x2, y2)
+                      else polyTm = tm
                   | (Tyvar _, Tyapp _) ->
-                    occuranceOf (Const(nm, type_subst [(tyApp, tyVar)] (type_of polyTm))) tm ((type_subst [(tyApp, tyVar)] (type_of polyTm)), type_of tm)
+                      occuranceOf (Const(nm, type_subst [(tyApp, tyVar)] (type_of polyTm))) tm ((type_subst [(tyApp, tyVar)] (type_of polyTm)), type_of tm)
                   | _ -> failwith "Not a constant" in
             occuranceOf (Const(cname, polyTy)) tm (polyTy, ty)
           else failwith "Not a constant"
@@ -1130,8 +1130,8 @@ let rec type_subst i ty =
   let CONSTRUCTION_TO_TERM_CONV tm = 
     let rec ctt trm = 
       match trm with
-        | Comb(f,a) -> 
-          if can constructionToTerm trm then constructionToTerm trm else Comb(ctt f, ctt a)
+        | Comb(f,a) ->
+            if can constructionToTerm trm then constructionToTerm trm else Comb(ctt f, ctt a)
         | Abs(v,b) -> Abs(ctt v, ctt b) 
         | Eval(e,ty) -> Eval(ctt e, ty)
         | Quote(e) -> Quote(ctt e) 
@@ -1273,7 +1273,7 @@ let rec type_subst i ty =
   let QUO_DISQUO tm = 
     if type_of tm = ep_ty then 
       let term1,ty = (if is_quasi_construction tm then tm,(construction_type tm) 
-                        else let q = dest_quote tm in (termToConstruction q), matchType (type_of q)) in   
+                      else let q = dest_quote tm in (termToConstruction q), matchType (type_of q)) in   
       let iet = Comb(Comb(is_expr_ty,term1),ty) in
       Sequent([],(internal_make_imp iet (safe_mk_eq (Eval(Comb(Const("Quo",makeHolFunction (ep_ty) (ep_ty)),term1),ep_ty)) term1)))
     else failwith "QUO_DISQUO: term must be of type epsilon"
