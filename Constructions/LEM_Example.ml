@@ -7,9 +7,9 @@ DISCH_TAC THEN
 ASM_REWRITE_TAC[EXCLUDED_MIDDLE]
 );;
 
-INST [`x:epsilon`,`x:epsilon`] lem;;
+INST [`x:epsilon`,`x:epsilon`] lem = lem;;
 
-INST [`y:epsilon`,`x:epsilon`] lem;;
+INST [`y:epsilon`,`x:epsilon`] lem = lem;;
 
 (*Proving what this means to be:*)
 let startingPoint = SPEC `y:epsilon` lem;;
@@ -20,7 +20,7 @@ let rawBETA_equiv = ONCE_DEPTH_CONV BETA_CONV rawBETA_term;;
 let desired_rawBETA = EQ_MP rawBETA_equiv rawBETA;;
 let varFree = CONJUNCT1 isFreeIn;;
 
-INST [`QuoConst "T" (TyBase "bool")`,`x:epsilon`] lem;;
+INST [`QuoConst "T" (TyBase "bool")`,`x:epsilon`] lem = lem;;
 
 	(* Proof of: (eval (QuoConst "T" (TyBase "bool")) to (bool)) \/ ~(eval (QuoConst "T" (TyBase "bool")) to (bool)) *)
 
@@ -61,12 +61,26 @@ INST [`QuoConst "T" (TyBase "bool")`,`x:epsilon`] lem;;
 	let true_LEM = prove(`(eval (QuoConst "T" (TyBase "bool")) to (bool)) \/ ~(eval (QuoConst "T" (TyBase "bool")) to (bool))`,
 	REWRITE_TAC[EXCLUDED_MIDDLE]);;
 
-INST [`QuoConst "F" (TyBase "bool")`,`x:epsilon`] lem;;
+INST [`QuoConst "F" (TyBase "bool")`,`x:epsilon`] lem = lem;;
 
 	let false_LEM = prove(`(eval (QuoConst "F" (TyBase "bool")) to (bool)) \/ ~(eval (QuoConst "F" (TyBase "bool")) to (bool))`,
 	REWRITE_TAC[EXCLUDED_MIDDLE]);;
+	
 
-INST [`Q_ (0 = 0) _Q`,`x:epsilon`] lem;;
+(* INST does nothing since x is bound... *)
+INST [`Q_ (0 = 0) _Q`,`x:epsilon`] lem = lem;;
+
+(* Here is the trivial substution *)
+concl(SPEC `Q_ (0 = 0) _Q` lem) = 
+`isExprType Q_ (0 = 0) _Q (TyBase "bool") ==> (\x. (eval (x) to (bool))) Q_ (0 = 0) _Q \/ ~(\x. (eval (x) to (bool))) Q_ (0 = 0) _Q`;;
+
+(* Apply axiom B11.2 to bring abstraction into the evaluation *)
+rand(concl(ONCE_DEPTH_CONV(EVAL_BETA_RED_CONV) (concl(SPEC `Q_ (0 = 0) _Q` lem)))) = 
+`isExprType Q_ (0 = 0) _Q (TyBase "bool") ==> (eval ((\x. x) Q_ (0 = 0) _Q) to (bool)) \/ ~(eval ((\x. x) Q_ (0 = 0) _Q) to (bool))`;;
+
+(* Simplify trivial beta-reduction *)
+rand(concl(ONCE_DEPTH_CONV(BETA_CONV) (rand(concl(ONCE_DEPTH_CONV(EVAL_BETA_RED_CONV) (concl(SPEC `Q_ (0 = 0) _Q` lem))))))) =
+`isExprType Q_ (0 = 0) _Q (TyBase "bool") ==> (eval (Q_ (0 = 0) _Q) to (bool)) \/ ~(eval (Q_ (0 = 0) _Q) to (bool))`;;
 
 	
 	(*The proof structure used previously requires a construction not a term, therefore we will do the proof with the right hand side of this equivalence, and them make the substitution at the end.*)
@@ -116,4 +130,6 @@ INST [`Q_ (0 = 0) _Q`,`x:epsilon`] lem;;
 
 
 
+
+				
 
