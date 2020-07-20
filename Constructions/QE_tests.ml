@@ -14,15 +14,9 @@ addNotEff refl_of_eq;;
 not_effective_in `x:aty` `(x:aty) = (x:aty)` = true;;
 concl refl_of_eq = `!y:aty. (\x:aty. (x:aty) = (x:aty)) y = ((x:aty) = (x:aty))` = true;;
 
-let anteced1 = prove(`isExprType ((\y. Q_ (x:aty = x) _Q) z) (TyBase "bool")`,
-					REWRITE_TAC[isExprType] THEN
-					REWRITE_TAC[QUOTE_TO_CONSTRUCTION_CONV `isExpr Q_ (x:aty = x) _Q /\ TyBase "bool" = combinatoryType Q_ (x:aty = x) _Q`]
-					THEN REWRITE_TAC[isExpr; combinatoryType;isApp; isConst;ep_constructor;stripFunc;isFunction;headFunc]);;
-let anteced2 = prove(`~(isFreeIn (QuoVar "y" (TyVar "aty")) ((\y:aty. Q_ (x:aty = x) _Q)(z:aty)))`,
-					BETA_TAC THEN
-					REWRITE_TAC[QUOTE_TO_CONSTRUCTION_CONV `Q_ (x:aty = x) _Q`] THEN
-					REWRITE_TAC[isFreeIn] THEN
-					REWRITE_TAC[(STRING_EQ_CONV `"y" = "x"`)]);;
+let anteced1 = prove(`isExprType ((\y. Q_ (x:aty = x) _Q) z) (TyBase "bool")`, QUOTE_TO_CONSTRUCTION_TAC THEN IS_EXPR_TYPE_TAC);;
+let anteced2 = prove(`~(isFreeIn (QuoVar "y" (TyVar "aty")) ((\y:aty. Q_ (x:aty = x) _Q)(z:aty)))`, QUOTE_TO_CONSTRUCTION_TAC THEN IS_FREE_IN_TAC);;
+			
 let eval_refl = prove(mk_not_effective_in `y:aty` `eval Q_ (x:aty) = x _Q to bool` `z:aty`, 
 						GEN_TAC THEN 
 						(MP_TAC(BETA_REDUCE_EVAL `y:aty` `z:aty` `Q_ (x:aty) = x _Q` `:bool`)) THEN 
