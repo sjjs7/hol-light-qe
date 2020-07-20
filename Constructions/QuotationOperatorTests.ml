@@ -2,11 +2,12 @@ needs "Constructions/QuotationTactics.ml";;
 (*Similar to the tests for epsilon, this will prove a few theorems to verify that _Q_ and Q_ _Q work as intended, along with a few tests with OCaml functions to ensure the Quote term is working correctly*)
 
 (*This tests that quotations are correctly converted to epsilon terms*)
-prove(`Q_ (x + 3) _Q = (App (App (QuoConst "+" (TyBiCons "fun" (TyBase "num") (TyBiCons "fun" (TyBase "num") (TyBase "num")))) (QuoVar "x" (TyBase "num")))
-    (App (QuoConst "NUMERAL" (TyBiCons "fun" (TyBase "num") (TyBase "num")))
-   (App (QuoConst "BIT1" (TyBiCons "fun" (TyBase "num") (TyBase "num")))
-   (App (QuoConst "BIT1" (TyBiCons "fun" (TyBase "num") (TyBase "num")))
-   (QuoConst "_0" (TyBase "num"))))))`,
+prove(
+`Q_ (x + 3) _Q = (App (App (QuoConst "+" (TyBiCons "fun" (TyBase "num") (TyBiCons "fun" (TyBase "num") (TyBase "num")))) (QuoVar "x" (TyBase "num")))
+(App (QuoConst "NUMERAL" (TyBiCons "fun" (TyBase "num") (TyBase "num")))
+(App (QuoConst "BIT1" (TyBiCons "fun" (TyBase "num") (TyBase "num")))
+(App (QuoConst "BIT1" (TyBiCons "fun" (TyBase "num") (TyBase "num")))
+(QuoConst "_0" (TyBase "num"))))))`,
 QUOTE_TO_CONSTRUCTION_TAC THEN
 REFL_TAC
 );;
@@ -46,7 +47,7 @@ let testFun = define `
     (testFun (n + 1) = (Q_ testFun(n) _Q))`;;
 
 let testFun2 = define `
-    (testFun2 0 = Quo(Quo(QuoConst "_0" (TyBase "num")))) /\
+    (testFun2 0 = Quo(QuoConst "_0" (TyBase "num"))) /\
     (testFun2 (n + 1) = Quo(testFun2(n)))`;;
 
 
