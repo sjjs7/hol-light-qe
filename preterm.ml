@@ -131,7 +131,7 @@ type preterm = Varp of string * pretype       (* Variable           - v      *)
              | Combp of preterm * preterm     (* Combination        - f x    *)
              | Absp of preterm * preterm      (* Lambda-abstraction - \x. t  *)
              | Quotep of preterm              (* Quotation              *)
-             | Holep of preterm               (* Stores holes from parser    *)
+             | Holep of preterm * pretype     (* Stores holes from parser    *)
              | Evalp of preterm * pretype     (* Evaluation                  *) 
              | Typing of preterm * pretype;;  (* Type constraint    - t : ty *)
 
@@ -155,8 +155,8 @@ let rec preterm_of_term tm =
       let l = dest_quote tm in
       Quotep(preterm_of_term l)
   with Failure _ -> try
-      let e,_ = dest_hole tm in
-      Holep(preterm_of_term e)
+      let e,ty = dest_hole tm in
+      Holep(preterm_of_term e,pretype_of_type ty)
   with Failure _ -> 
       let e,ty = dest_eval tm in
       Evalp(preterm_of_term e,pretype_of_type ty);;
@@ -384,9 +384,9 @@ let type_of_pretype,term_of_preterm,retypecheck =
       let uenv' = itlist I [stripStvNum ty |-> Ptycon("epsilon",[])] uenv in (*Define Quotep's Stv as an epsilon type*)
       let f,venv1, uenv1 = typify ty' (a,venv,uenv') in
       Quotep(f), venv1, uenv1
-    |Holep(e) -> let ty' = new_type_var() in
+    |Holep(e,t) -> let ty' = new_type_var() in
       let e,venv1,uenv1 = typify ty' (e,venv,uenv) in
-      Holep(e), venv1, uenv1
+      Holep(e,t), venv1, uenv1
     | Evalp(e,t) -> let ty' = new_type_var() in
       let uenv' = if isSTV ty then itlist I [stripStvNum ty |-> t] uenv else uenv in 
       let f,venv1,uenv1 = typify ty' (e,venv,uenv') in
@@ -404,7 +404,7 @@ let type_of_pretype,term_of_preterm,retypecheck =
     | Absp(v,bod) -> resolve_interface v (resolve_interface bod cont) env
     | Varp(_,_) -> cont env
     | Quotep(a) -> resolve_interface a cont env
-    | Holep(a) -> resolve_interface a cont env
+    | Holep(a,ty) -> resolve_interface a cont env
     | Evalp(e,ty) -> resolve_interface e cont env
     | Constp(s,ty) ->
           let maps = filter (fun (s',_) -> s' = s) (!the_interface) in
@@ -424,7 +424,7 @@ let type_of_pretype,term_of_preterm,retypecheck =
     | Combp(f,x) -> Combp(solve_preterm env f,solve_preterm env x)
     | Absp(v,bod) -> Absp(solve_preterm env v,solve_preterm env bod)
     | Quotep(a) -> Quotep(solve_preterm env a)
-    | Holep(a) -> Holep(solve_preterm env a)
+    | Holep(a,ty) -> Holep(solve_preterm env a,solve env ty)
     | Evalp(e,ty) -> Evalp(solve_preterm env e,solve env ty)
     | Constp(s,ty) -> let tys = solve env ty in
           try let _,(c',_) = find
@@ -467,7 +467,7 @@ let type_of_pretype,term_of_preterm,retypecheck =
       | Combp(l,r) -> mk_comb(term_of_preterm l,term_of_preterm r)
       | Absp(v,bod) -> mk_gabs(term_of_preterm v,term_of_preterm bod)
       | Quotep(a) -> mk_quote (term_of_preterm a)
-      | Holep(a) ->  let ToP = term_of_preterm a in if type_of (ToP) = mk_type("epsilon",[]) then mk_hole ToP else failwith "Holed term is not of type epsilon"
+      | Holep(a,ty) ->  let ToP = term_of_preterm a in if type_of (ToP) = mk_type("epsilon",[]) then mk_hole(ToP,type_of_pretype ty) else failwith "Holed term is not of type epsilon"
       | Evalp(e,ty) -> mk_eval(term_of_preterm e,type_of_pretype ty)
       | Typing(ptm,pty) -> term_of_preterm ptm in
     let report_type_invention () =

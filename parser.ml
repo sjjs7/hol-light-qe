@@ -376,7 +376,7 @@ let parse_preterm =
   and lmk_setenum(l,_) = pmk_set_enum l
   and lmk_setabs(((l,_),r),_) = pmk_setabs(l,r)
   and lmk_quote (_,preterm),_ = Quotep(preterm)
-  and lmk_hole (_,preterm),_ =  Holep(preterm) 
+  and lmk_hole ((((_,preterm),_),_),ty) =  Holep(preterm,ty) 
   and lmk_eval (((_,preterm),_),ty) = Evalp(preterm,ty)
   and lmk_setcompr(((((f,_),vs),_),b),_) =
      pmk_setcompr(f,pfrees vs,b)
@@ -507,7 +507,7 @@ let parse_preterm =
   (*Enable parsing support for inputting quotations directly in the form of Q_ <term> _Q*)
   ||| (a (Resword "Q_") ++ preterm ++ a (Resword "_Q")
       >> lmk_quote)
-  ||| (a (Resword "H_") ++ preterm ++ a (Resword "_H")
+  ||| (a (Resword "H_") ++ preterm ++ a (Resword "_H") ++ a (Resword "of") ++ pretype
       >> lmk_hole)
   ||| (a (Resword "eval") ++ preterm ++ a (Resword "to") ++ pretype
       >> lmk_eval)
