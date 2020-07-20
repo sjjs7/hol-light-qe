@@ -50,10 +50,10 @@ let testFun2 = define `
     (testFun2 (n + 1) = Quo(testFun2(n)))`;;
 
 
-(*This tests that unquote tactics work*)
+(*This tests that Construction -> Quote tactics work*)
 prove(`eval testFun 0 to epsilon = eval testFun2 0 to epsilon`,
-    REWRITE_TAC[testFun; testFun2] THEN 
-    CONSTRUCTION_TO_QUOTE_TAC THEN 
-    REFL_TAC
+REWRITE_TAC[testFun; testFun2] THEN 
+CONSTRUCTION_TO_QUOTE_TAC THEN 
+REFL_TAC
 );;
 
