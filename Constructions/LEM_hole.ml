@@ -10,7 +10,7 @@ let holed_lem =
 	REWRITE_TAC[IMP_CONJ] THEN
 	REPEAT(DISCH_TAC) THEN 
 	MP_TAC(APP_DISQUO 
-    `App (QuoConst "\\/" (TyBiCons "fun" (TyBase "bool") (TyBiCons "fun" (TyBase "bool") (TyBase "bool"))))(x:epsilon)`
+	  `App (QuoConst "\\/" (TyBiCons "fun" (TyBase "bool") (TyBiCons "fun" (TyBase "bool") (TyBase "bool"))))(x:epsilon)`
 	  `App (QuoConst "~" (TyBiCons "fun" (TyBase "bool") (TyBase "bool"))) (x:epsilon)`) THEN
 	IS_EXPR_TYPE_TAC THEN 
 	DISCH_TAC THEN
