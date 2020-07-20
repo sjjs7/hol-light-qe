@@ -1141,19 +1141,19 @@ let rec type_subst i ty =
     if conToTerm = tm then failwith "CONSTRUCTION_TO_TERM_CONV: No constructions in term."
     else Sequent([], safe_mk_eq tm conToTerm)
 
-  let rec is_quasi_construction tm = 
+  let rec is_construction tm = 
     match tm with 
       | Comb(Comb(Const("QuoVar",_),_),_) -> true
       | Comb(Comb(Const("QuoConst", _), _), _) -> true
-      | Comb(Const("Quo", ty), e) -> is_quasi_construction e
-      | Comb(Comb(Const("App", _), func), arg) -> is_quasi_construction func && is_quasi_construction arg
-      | Comb(Comb(Const("Abs", _), var), body) -> is_quasi_construction var && is_quasi_construction body 
+      | Comb(Const("Quo", ty), e) -> is_construction e
+      | Comb(Comb(Const("App", _), func), arg) -> is_construction func && is_construction arg
+      | Comb(Comb(Const("Abs", _), var), body) -> is_construction var && is_construction body 
       | _ when type_of tm = ep_ty -> true 
       | _ -> failwith "Not a quasi construction"
 
   let is_proper_construc c = can constructionToTerm c 
 
-  let proper_e_term tm = is_proper_construc tm || is_quote tm || is_quasi_construction tm
+  let proper_e_term tm = is_proper_construc tm || is_quote tm || is_construction tm
 
 (* ------------------------------------------------------------------------ *)
 (* Inference rule of quotation.                                             *)
@@ -1192,8 +1192,7 @@ let rec type_subst i ty =
         | Comb(f,a) -> if can constructionToTerm trm then Quote(constructionToTerm trm)
                        else Comb(ctq f, ctq a)
         | Abs(v,b) -> Abs(v, ctq b)
-        | Eval(e,ty) -> if can constructionToTerm e then Eval(Quote(constructionToTerm e), ty)
-                        else Eval(ctq e, ty)
+        | Eval(e,ty) -> Eval(ctq e, ty)
         | Quote(e) -> Quote(ctq e)
         | Hole(e,ty) -> Hole(ctq e, ty)
         | _ -> trm 
@@ -1272,7 +1271,7 @@ let rec type_subst i ty =
 
   let QUO_DISQUO tm = 
     if type_of tm = ep_ty then 
-      let term1,ty = (if is_quasi_construction tm then tm,(construction_type tm) 
+      let term1,ty = (if is_construction tm then tm,(construction_type tm) 
                       else let q = dest_quote tm in (termToConstruction q), matchType (type_of q)) in   
       let iet = Comb(Comb(is_expr_ty,term1),ty) in
       Sequent([],(internal_make_imp iet (safe_mk_eq (Eval(Comb(Const("Quo",makeHolFunction (ep_ty) (ep_ty)),term1),ep_ty)) term1)))
@@ -1284,7 +1283,7 @@ let rec type_subst i ty =
     else 
       let v_term = (if is_proper_construc var then constructionToTerm var else dest_quote var) in
       let term1 = (if is_proper_construc var then var else termToConstruction(dest_quote var)) in
-      let term2 = (if is_quasi_construction tm then tm else termToConstruction(dest_quote tm)) in 
+      let term2 = (if is_construction tm then tm else termToConstruction(dest_quote tm)) in 
       let fun_ty = makeHolFunction (type_of v_term) (revTypeMatch(construction_type term2)) in
       match fun_ty with
         | Tyapp("fun",[dom;ran]) -> 
@@ -1301,8 +1300,8 @@ let rec type_subst i ty =
   let APP_DISQUO tm1 tm2 = 
     if (not (proper_e_term tm1)) or (not (proper_e_term tm2)) then failwith "APP_DISQUO: Invalid terms, they must either be quotations or proper constructions" 
     else 
-      let term1 = (if is_quasi_construction tm1 then tm1 else termToConstruction(dest_quote tm1)) in
-      let term2 = (if is_quasi_construction tm2 then tm2 else termToConstruction(dest_quote tm2)) in 
+      let term1 = (if is_construction tm1 then tm1 else termToConstruction(dest_quote tm1)) in
+      let term2 = (if is_construction tm2 then tm2 else termToConstruction(dest_quote tm2)) in 
       let fun_ty = revTypeMatch (construction_type term1) in
       match fun_ty with
         | Tyapp("fun",[dom;ran]) ->  
