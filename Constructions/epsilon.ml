@@ -60,10 +60,11 @@ let isAbs = define `isAbs e = ((ep_constructor e) = "Abs")`;;
 let isApp = define `isApp e = ((ep_constructor e) = "App")`;;
 
 (*Checks if a given type is a function using a much cleaner method*)
-let isFunction = define `(isFunction (TyVar str) = F) /\
-						 (isFunction (TyBase str) = F) /\
-						 (isFunction (TyMonoCons str ty) = F) /\
-						 (isFunction (TyBiCons str ty1 ty2) = (str = "fun"))`;; 
+let isFunction = define `
+  (isFunction (TyVar str) = F) /\
+  (isFunction (TyBase str) = F) /\
+  (isFunction (TyMonoCons str ty) = F) /\
+  (isFunction (TyBiCons str ty1 ty2) = (str = "fun"))`;; 
 
 (*This function will take a variable term, and another term of type epsilon, and return whether or not the types mismatch. If the term is not found, false is returned.
 i.e. true means that two variables of the same name but different types exist inside these terms*)
