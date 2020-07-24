@@ -1149,7 +1149,7 @@ let rec type_subst i ty =
       | Comb(Comb(Const("App", _), func), arg) -> is_construction func && is_construction arg
       | Comb(Comb(Const("Abs", _), var), body) -> is_construction var && is_construction body 
       | _ when type_of tm = ep_ty -> true 
-      | _ -> failwith "Not a quasi construction"
+      | _ -> failwith "Not a construction"
 
   let is_proper_construc c = can constructionToTerm c 
 
