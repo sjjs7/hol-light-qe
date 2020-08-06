@@ -1,5 +1,6 @@
 needs "Constructions/addition.ml";;
 needs "Constructions/QuotationTactics.ml";;
+needs "Constructions/gen_tactics.ml";;
 
 (*                                                                       *)
 (* Term builders : these functions allow members of the type `nat`       *)
@@ -512,6 +513,33 @@ let TRIV_NE tm =
   in
   add_all_ne_thms tm;;
 
+let (NAT_APP_DISQUO_TAC:tactic) =
+  fun (asl,w) ->
+  let rec find_app tm = 
+    match tm with 
+      | Comb(Comb(Const("App",_),_),_) -> tm
+      | Comb(t1,t2) ->
+          (try find_app t1 with Failure _ -> 
+          try  find_app t2 with Failure _ -> 
+              failwith "Not applicable")
+      | Abs(v,b) -> find_app b
+      | Eval(e,_) -> find_app e 
+      | Quote(e) -> find_app e 
+      | Hole(e,_) -> find_app e  
+      | _ -> failwith "Not applicable"
+  in 
+  let tac tm = 
+    match tm with 
+      | Comb(Comb(Const("App",_),t1),t2) ->
+          (MP_TAC(APP_DISQUO t1 t2) THEN 
+          ASM_REWRITE_TAC[] THEN 
+          TRY (PROPER_TYPE_TAC(t2)) THEN
+          IS_EXPR_TYPE_TAC THEN 
+          REPEAT DISCH_TAC THEN 
+          ASM_REWRITE_TAC[]) 
+  in
+  (tac(find_app w)) (asl,w);;
+
 (* Creates therorem:                                                          *)
 (* !j:epsilon. proper_nat_construct j ==>                                     *)
 (*   (\tm. (eval (j) to (nat))) (w:type_of tm) = (eval ((\tm. j) w) to (nat)) *)
@@ -999,6 +1027,10 @@ let thm3_x_quoconst = sub_add_one `QuoConst a0 a1`;;
 
 let x_eps_thm3_sub = no_sub_add_one `a0:epsilon` `w:epsilon`;;
 
+let x_eps_thm3_sub2 = no_sub_add_one `a1:epsilon` `w:epsilon`;;
+
+let x_eps_thm3_sub3 = no_sub_add_one `a:epsilon` `w:epsilon`;;
+
 let a0_eps_ne_thm3 = 
   ne_to_inst `a0:epsilon` 
   `\x. proper_nat_construct x
@@ -1006,22 +1038,16 @@ let a0_eps_ne_thm3 =
   add_unary One (eval (x) to (nat))` `w:epsilon` x_eps_thm3_sub;;
 
 let a1_eps_ne_thm3 = 
-  let tm = (mk_not_effective_in `a1:epsilon` 
+  ne_to_inst `a1:epsilon` 
     `\x. proper_nat_construct x
     ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-    add_unary One (eval (x) to (nat))` `w:epsilon`) 
-  in
-  EQ_MP (ALPHA (concl a0_eps_ne_thm3) tm) a0_eps_ne_thm3;;
-addNotEff a1_eps_ne_thm3;;
+    add_unary One (eval (x) to (nat))` `w:epsilon` x_eps_thm3_sub2;;
 
 let a_eps_ne_thm3 = 
-  let tm = (mk_not_effective_in `a:epsilon` 
+ ne_to_inst `a:epsilon` 
     `\x. proper_nat_construct x
     ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-    add_unary One (eval (x) to (nat))` `w:epsilon`) 
-  in
-  EQ_MP (ALPHA (concl a0_eps_ne_thm3) tm) a0_eps_ne_thm3;;
-addNotEff a_eps_ne_thm3;;
+    add_unary One (eval (x) to (nat))` `w:epsilon` x_eps_thm3_sub3;;
 
 let sub_a1_thm = sub_add_one `a1:epsilon`;;
 
@@ -1154,6 +1180,8 @@ let add_meaning =
   ASM_REWRITE_TAC[add_ebin] THENL
   [
 
+
+
   MP_TAC(APP_DISQUO 
     `QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))` 
     `b1:epsilon`) THEN 
@@ -1161,6 +1189,7 @@ let add_meaning =
     `QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))` 
     `b1:epsilon`) THEN
   PROPER_TYPE_TAC(`b1:epsilon`) THEN
+  ASM_REWRITE_TAC[] THEN 
   IS_EXPR_TYPE_TAC THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN
@@ -1184,6 +1213,7 @@ let add_meaning =
   DISCH_TAC THEN  
   ASM_REWRITE_TAC[] THEN
   PROPER_TYPE_TAC(`b1:epsilon`) THEN
+  ASM_REWRITE_TAC[] THEN 
   IS_EXPR_TYPE_TAC THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN 
@@ -1229,6 +1259,7 @@ let add_meaning =
     `QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`  
     `a1:epsilon`) THEN
   PROPER_TYPE_TAC(`a1:epsilon`) THEN
+  ASM_REWRITE_TAC[] THEN 
   IS_EXPR_TYPE_TAC THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN
@@ -1250,6 +1281,7 @@ let add_meaning =
   DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN
   PROPER_TYPE_TAC(`a1:epsilon`) THEN
+  ASM_REWRITE_TAC[] THEN 
   IS_EXPR_TYPE_TAC THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN
