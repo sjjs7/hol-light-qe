@@ -1,9 +1,11 @@
 needs "Constructions/addition.ml";;
 needs "Constructions/QuotationTactics.ml";;
 
-(*               *)
-(* Term builders *)
-(*               *)
+(*                                                                       *)
+(* Term builders : these functions allow members of the type `nat`       *)
+(*                 (representing unary numbers) to be manipulated like   *)
+(*                 binary numbers                                        *)
+(*                                                                       *)
 
 let one_def = define `(One = S Zero)`;;
 
@@ -17,9 +19,17 @@ let thenOne = define `
   (thenOne (S Zero) = S (S (S Zero))) /\
   (thenOne (S (S x)) = add_unary (add_unary (S (S x)) (S (S x))) (S Zero))`;;
 
-(*                                                                *)
-(* Classify constructions representing proper numbers of type nat *)
-(*                                                                *)
+(*
+let ZERO = `QuoConst "Zero" (TyBase "nat")`;;
+
+Comb(Comb(Const(constName,ty),firstArg),secondArg)
+
+let add_me = define `add_me ZERO ZERO = ZERO` *)
+
+(*                                                                       *)
+(* Classification of the subset of constructions representing proper     *)
+(* `nat` expressions (i.e. binary numbers beginning with a 1)            *)
+(*                                                                       *)
 
 let start_with_one = define `
   (start_with_one (QuoConst str ty) <=> 
@@ -45,7 +55,7 @@ let proper_nat_construct = define `
   (proper_nat_construct (QuoVar str ty) = F)` ;;
 
 (*                                                                *)
-(* Addition of epsilon numbers                                    *)
+(* Syntactical addition algorithm                                 *)
 (*                                                                *)
 
 let add_ebin = define `
@@ -87,28 +97,31 @@ let add_ebin = define `
     (add_ebin (QuoConst "One" (TyBase "nat")) (add_ebin x y))))`;; 
 
 
-(* Lemmas regarding constructions of nats *)
+(* Tactics for proving theorems involving the `nat` type  *)
+
+(* Used when each base case can be easily solved *)
+let DOUBLE_NAT_INDUCT_TAC thml = 
+  MATCH_MP_TAC(nat_induct) THEN 
+  REWRITE_TAC[thenOne;thenZero;one_def;add_unary] THEN 
+  MATCH_MP_TAC(nat_induct) THEN 
+  REWRITE_TAC[thenOne;thenZero;one_def;add_unary] THEN 
+  GEN_TAC THEN 
+  REPEAT DISCH_TAC THEN 
+  REWRITE_TAC thml;;
+
+  
+(*                                                                *)
+(* Simple `nat` arithmetic lemmas translated to the epsilon type  *)
+(*                                                                *)
 
 let remove_one = prove(
   `!x:nat. add_unary One (thenZero x) = thenOne x`,
-  MATCH_MP_TAC(nat_induct) THEN
-  REWRITE_TAC[thenZero;one_def;thenOne;add_unary] THEN
-  MATCH_MP_TAC(nat_induct) THEN
-  REWRITE_TAC[thenZero;one_def;thenOne;add_unary] THEN 
-  GEN_TAC THEN 
-  REPEAT DISCH_TAC THEN 
-  REWRITE_TAC[SPECL [`(Zero):nat`;`(add_unary (S (S a)) a):nat`] take_s;id_of_plus]
+  DOUBLE_NAT_INDUCT_TAC[SPECL [`(Zero):nat`;`(add_unary (S (S a)) a):nat`] take_s;id_of_plus]
   );;
 
 let carry_one = prove(
   `!x:nat. add_unary One (thenOne x) = thenZero (add_unary One x)`,
-  MATCH_MP_TAC(nat_induct) THEN 
-  REWRITE_TAC[thenOne; thenZero;one_def;add_unary] THEN 
-  MATCH_MP_TAC(nat_induct) THEN 
-  REWRITE_TAC[thenOne; thenZero;one_def;add_unary] THEN 
-  GEN_TAC THEN 
-  REPEAT DISCH_TAC THEN 
-  REWRITE_TAC[take_s;add_unary;id_of_plus]
+  DOUBLE_NAT_INDUCT_TAC[take_s;add_unary;id_of_plus]
   );;
 
 let ebin_sym_add = prove(
@@ -124,16 +137,14 @@ let ebin_sym_add = prove(
   CONJ_TAC THEN 
   REPEAT GEN_TAC THENL
   [REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"`) THEN 
+  TOP_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] THEN 
-  DISJ_CASES_TAC(ASSUME `a0' = "Zero" \/ a0' = "One"`) THEN 
+  BOTTOM_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin]
   ;REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"`) THEN
+  TOP_DISJ_CASES_TAC THEN
   ASM_REWRITE_TAC[add_ebin] THEN
-  DISJ_CASES_TAC(ASSUME `a0' =
-  QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-  a0' = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
+  BOTTOM_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] 
   ]
   ;REPEAT DISCH_TAC THEN 
@@ -142,24 +153,17 @@ let ebin_sym_add = prove(
   CONJ_TAC THEN 
   REPEAT GEN_TAC THEN 
   REPEAT DISCH_TAC THENL
-  [DISJ_CASES_TAC(ASSUME `a0' = "Zero" \/ a0' = "One"`) THEN 
+  [BOTTOM_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] THEN 
-  DISJ_CASES_TAC(ASSUME `a0 = 
-  QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-  a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
+  TOP_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin]
-  ;DISJ_CASES_TAC(ASSUME `a0 = 
-  QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-  a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
-  DISJ_CASES_TAC(ASSUME `a0' =
-  QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-  a0' = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
+  ;TOP_DISJ_CASES_TAC THEN 
+  BOTTOM_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] THEN
-  MP_TAC(SPEC `a1':epsilon` 
+  MP_ASSUMPTION_TAC(SPEC `a1':epsilon` 
   (ASSUME `!y. proper_nat_construct a1
   ==> proper_nat_construct y
   ==> add_ebin a1 y = add_ebin y a1`)) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct a1`;ASSUME `proper_nat_construct a1'`] THEN
   DISCH_TAC THEN 
   ASM_REWRITE_TAC[]
   ] 
@@ -185,7 +189,6 @@ let add_one_even = prove(
   MATCH_MP_TAC(nat_induct) THEN 
   REWRITE_TAC[thenZero;thenOne;take_s;add_unary]
   );;
-
 
 let add_even = prove(
   `!x:nat. !y:nat. thenZero (add_unary x y) = 
@@ -246,9 +249,10 @@ let odd_to_even = prove(
   REWRITE_TAC[take_out_s_thenOne;add_unary;take_s]
   );;
 
+(*                                                                *)
+(* Results regarding the syntax of proper `nat` expressions       *)
+(*                                                                *)
 
-
-(* Lemma 1 *)
 let lemma1 = prove(
   `!x:epsilon. proper_nat_construct x ==> 
   isExprType x (TyBase "nat")`,
@@ -260,19 +264,15 @@ let lemma1 = prove(
   REWRITE_TAC[isExprType] THEN
   REPEAT DISCH_TAC THEN 
   IS_EXPR_TYPE_TAC THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) 
-  	\/ a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN
+  TOP_DISJ_CASES_TAC THEN
   ASM_REWRITE_TAC[
     ep_constructor;combinatoryType;isFunction;headFunc;isExpr;stripFunc] THEN 
-  MP_TAC(ASSUME 
+  MP_ASSUMPTION_TAC(ASSUME 
     `proper_nat_construct a1 ==> 
   	isExpr a1 /\ combinatoryType a1 = TyBase "nat"`) THEN
-  REWRITE_TAC[ASSUME `proper_nat_construct a1`] THEN 
   REWRITE_TAC[IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[]);; 
-
 
 let lemma3 = prove(
   `!x:epsilon. start_with_one x ==> 
@@ -284,14 +284,12 @@ let lemma3 = prove(
   REWRITE_TAC[IMP_CONJ] THEN
   REPEAT DISCH_TAC THENL
   [ASM_REWRITE_TAC[add_ebin;start_with_one]
-  ;DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THENL
+  ;TOP_DISJ_CASES_TAC THENL
   [ASM_REWRITE_TAC[add_ebin;start_with_one]
   ;ASM_REWRITE_TAC[add_ebin;start_with_one] THEN 
-  MP_TAC(ASSUME `start_with_one a1
+  MP_ASSUMPTION_TAC(ASSUME `start_with_one a1
     ==> start_with_one (add_ebin (QuoConst "One" (TyBase "nat")) a1)`) THEN
-  REWRITE_TAC[ASSUME `start_with_one a1`]
+  REWRITE_TAC[]
   ] 
   ]
   );;
@@ -305,24 +303,21 @@ let lemma4 = prove(
   REPEAT GEN_TAC THEN
   REWRITE_TAC[IMP_CONJ] THEN
   REPEAT DISCH_TAC THENL
-  [DISJ_CASES_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"`) THEN
+  [TOP_DISJ_CASES_TAC THEN
   ASM_REWRITE_TAC[add_ebin;proper_nat_construct;start_with_one]
-  ;DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN
+  ;TOP_DISJ_CASES_TAC THEN
   ASM_REWRITE_TAC[add_ebin;proper_nat_construct] THEN 
-  MP_TAC(ASSUME 
+  MP_ASSUMPTION_TAC(ASSUME 
   	`proper_nat_construct a1 ==> 
   	proper_nat_construct (add_ebin (QuoConst "One" (TyBase "nat")) a1)`) THEN 
-  MP_TAC(SPEC `a1:epsilon` lemma3) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct a1`;ASSUME `start_with_one a1`] THEN 
+  MP_ASSUMPTION_TAC(SPEC `a1:epsilon` lemma3) THEN
   REPEAT DISCH_TAC THEN
   ASM_REWRITE_TAC[]
   ]
   );;
 
 let lemma5 = prove(
-  `!x:epsilon. !y:epsilon. start_with_one x /\ 
+  `!x:epsilon. !y:epsilon. start_with_one x ==> 
   start_with_one y ==> start_with_one (add_ebin x y)`,
   MATCH_MP_TAC(lth) THEN 
   REWRITE_TAC[start_with_one] THEN 
@@ -331,8 +326,7 @@ let lemma5 = prove(
   REWRITE_TAC[IMP_CONJ] THEN
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN 
-  MP_TAC(SPEC `y:epsilon` lemma3) THEN
-  REWRITE_TAC[ASSUME `start_with_one y`]
+  MP_ASSUMPTION_TAC(SPEC `y:epsilon` lemma3) 
   ;REPEAT GEN_TAC THEN
   REWRITE_TAC[IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
@@ -342,33 +336,25 @@ let lemma5 = prove(
   REPEAT GEN_TAC THEN 
   REWRITE_TAC[IMP_CONJ] THEN
   REPEAT DISCH_TAC THENL
-  [DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN
+  [TOP_DISJ_CASES_TAC THEN
   ASM_REWRITE_TAC[add_ebin;start_with_one] THEN 
-  MP_TAC(SPEC `a1:epsilon` lemma3) THEN 
-  REWRITE_TAC[ASSUME `start_with_one a1`]
-  ;DISJ_CASES_TAC(ASSUME 
-    `a0' = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0' = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
+  MP_ASSUMPTION_TAC(SPEC `a1:epsilon` lemma3) 
+  ;BOTTOM_DISJ_CASES_TAC THEN 
+  TOP_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin;start_with_one] THEN
-  MP_TAC(SPEC `a1':epsilon` (ASSUME 
+  MP_ASSUMPTION_TAC(SPEC `a1':epsilon` (ASSUME 
     `!y. start_with_one a1
     ==> start_with_one y
     ==> start_with_one (add_ebin a1 y)`)) THEN 
-  REWRITE_TAC[ASSUME `start_with_one a1`; ASSUME `start_with_one a1'`] THEN 
   DISCH_TAC THEN 
-  MP_TAC(SPEC `add_ebin (a1:epsilon) (a1':epsilon)` lemma3) THEN 
-  REWRITE_TAC[ASSUME `start_with_one (add_ebin a1 a1')`]
+  MP_ASSUMPTION_TAC(SPEC `add_ebin (a1:epsilon) (a1':epsilon)` lemma3) THEN 
+  REWRITE_TAC[]
   ]
   ]
   );;
 
 let lemma6 = prove(
-  `!x:epsilon. !y:epsilon. proper_nat_construct x /\ 
+  `!x:epsilon. !y:epsilon. proper_nat_construct x ==> 
   proper_nat_construct y ==> proper_nat_construct (add_ebin x y)`,
   MATCH_MP_TAC(lth) THEN 
   REWRITE_TAC[proper_nat_construct] THEN 
@@ -381,35 +367,27 @@ let lemma6 = prove(
   [REWRITE_TAC[IMP_CONJ] THEN
   REPEAT GEN_TAC THEN
   REPEAT DISCH_TAC THEN
-  DISJ_CASES_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"`) THENL
+  TOP_DISJ_CASES_TAC THENL
   [ASM_REWRITE_TAC[add_ebin;proper_nat_construct] 
-  ;DISJ_CASES_TAC(ASSUME `a0' = "Zero" \/ a0' = "One"`) THEN
+  ;BOTTOM_DISJ_CASES_TAC THEN
   ASM_REWRITE_TAC[add_ebin;proper_nat_construct;start_with_one]
   ]
   ;REPEAT GEN_TAC THEN
   REWRITE_TAC[IMP_CONJ] THEN
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"`) THENL
+  TOP_DISJ_CASES_TAC THENL
   [ASM_REWRITE_TAC[add_ebin;proper_nat_construct]
-  ;DISJ_CASES_TAC(ASSUME 
-    `a0' = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0' = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THENL
-  [ASM_REWRITE_TAC[add_ebin;proper_nat_construct;start_with_one]
-  ;ASM_REWRITE_TAC[add_ebin;proper_nat_construct;start_with_one] THEN
-  MP_TAC(SPEC `a1':epsilon` lemma3) THEN 
-  MP_TAC(ASSUME 
+  ;BOTTOM_DISJ_CASES_TAC THEN
+  ASM_REWRITE_TAC[add_ebin;proper_nat_construct;start_with_one] THEN
+  MP_ASSUMPTION_TAC(SPEC `a1':epsilon` lemma3) THEN 
+  MP_ASSUMPTION_TAC(ASSUME 
     `a0 = "Zero" \/ a0 = "One"
     ==> a1 = TyBase "nat"
     ==> proper_nat_construct a1'
     ==> proper_nat_construct (add_ebin (QuoConst a0 a1) a1')`) THEN 
-  REWRITE_TAC[
-    ASSUME `proper_nat_construct a1'`; 
-    ASSUME `start_with_one a1'`; 
-    ASSUME `a0 = "One"`; 
-    ASSUME `a1 = TyBase "nat"`] THEN 
+  ASM_REWRITE_TAC[] THEN 
   REPEAT DISCH_TAC THEN
-  ASM_REWRITE_TAC[]
-  ] 
+  ASM_REWRITE_TAC[] 
   ]
   ]
   ;REPEAT GEN_TAC THEN
@@ -421,10 +399,8 @@ let lemma6 = prove(
   [REPEAT GEN_TAC THEN 
   REWRITE_TAC[IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN
-  DISJ_CASES_TAC(ASSUME `a0' = "Zero" \/ a0' = "One"`) THEN 
+  TOP_DISJ_CASES_TAC THEN
+  BOTTOM_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin;proper_nat_construct] THEN 
   MP_TAC(SPEC `a1:epsilon` lemma3) THEN 
   ASM_REWRITE_TAC[] THEN 
@@ -435,40 +411,28 @@ let lemma6 = prove(
   ;REPEAT GEN_TAC THEN
   REWRITE_TAC[IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `a0' = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0' = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN
+  TOP_DISJ_CASES_TAC THEN 
+  BOTTOM_DISJ_CASES_TAC THEN
   ASM_REWRITE_TAC[add_ebin;proper_nat_construct] THEN 
   ASM_REWRITE_TAC[add_ebin;proper_nat_construct] THEN 
-  MP_TAC(SPEC `a1':epsilon` (ASSUME 
+  MP_ASSUMPTION_TAC(SPEC `a1':epsilon` (ASSUME 
   	`!y. proper_nat_construct a1 ==> 
   	proper_nat_construct y ==> 
   	proper_nat_construct (add_ebin a1 y)`)) THEN
-  MP_TAC(SPECL [`a1:epsilon`;`a1':epsilon`] lemma5) THEN 
-  REWRITE_TAC[
-    ASSUME `proper_nat_construct a1`;
-    ASSUME `proper_nat_construct a1'`;
-    ASSUME `start_with_one a1`;
-    ASSUME `start_with_one a1'`] THEN 
+  MP_ASSUMPTION_TAC(SPECL [`a1:epsilon`;`a1':epsilon`] lemma5) THEN 
+  ASM_REWRITE_TAC[] THEN 
   REPEAT DISCH_TAC THEN
   ASM_REWRITE_TAC[] THEN
-  MP_TAC(SPEC `add_ebin (a1:epsilon) (a1':epsilon)` lemma3) THEN
-  MP_TAC(SPEC `add_ebin (a1:epsilon) (a1':epsilon)` lemma4) THEN 
-  REWRITE_TAC[
-    ASSUME `start_with_one (add_ebin a1 a1')`; 
-    ASSUME `proper_nat_construct (add_ebin a1 a1')`] THEN 
+  MP_ASSUMPTION_TAC(SPEC `add_ebin (a1:epsilon) (a1':epsilon)` lemma3) THEN
+  MP_ASSUMPTION_TAC(SPEC `add_ebin (a1:epsilon) (a1':epsilon)` lemma4) THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[]
   ]
   ] 
   );;
-
   
 let thm1 = prove(
-  `!x:epsilon. !y:epsilon. proper_nat_construct x /\ proper_nat_construct y 
+  `!x:epsilon. !y:epsilon. proper_nat_construct x ==> proper_nat_construct y 
   ==> isExprType(add_ebin x y) (TyBase "nat")`,
   REPEAT GEN_TAC THEN 
   REWRITE_TAC[IMP_CONJ] THEN 
@@ -494,20 +458,18 @@ let thm2 = prove(
   DISCH_TAC THEN 
   DISCH_TAC THEN 
   REWRITE_TAC[DE_MORGAN_THM] THEN 
-  MP_TAC(SPECL [`str:string`;`ty:type`] (ASSUME 
+  MP_ASSUMPTION_TAC(SPECL [`str:string`;`ty:type`] (ASSUME 
     `!str ty. proper_nat_construct a1 
     ==> ~isFreeIn (QuoVar str ty) a1`)) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct a1`] THEN
   DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
+  TOP_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[isFreeIn] 
   );;
 
-
+(*                  *)
 (* ADDITION TACTICS *)
+(*                  *)
 
 (* when proper_nat_construct x is an assumption, adds isExprType x nat to assumptions *)
 let PROPER_TYPE_TAC tm = 
@@ -532,418 +494,418 @@ let NAT_BETA_EVAL_RED tm =
     | _ -> failwith "wrong input";;
 
 
-  
-(* Trivial NOT-EFFECTIVE-IN statements- used for instantiating into induction thms *)
-let ne1 = NOT_FREE_ABS_NOT_EFFECTIVE_CONV 
-  `x:epsilon` `proper_nat_construct (x:epsilon) ==> 
-  (\a0:string. (eval (x:epsilon) to (nat))) (w:string) = 
-  eval (\a0. x) w to (nat)` `z:epsilon`;;
-addNotEff ne1;;  
+(* Function which searches a term for abstractions (\x. B) and creates the trivial *)
+(* NOT-EFFECTIVE-IN theorems stating x is NOT-EFFECTIVE-IN (\x. B)                 *)
+let TRIV_NE tm =
+  let rec add_all_ne_thms tm = match tm with 
+    | Abs(v,bod) when not (eval_free tm) ->  
+        let eff_thm = 
+          NOT_FREE_ABS_NOT_EFFECTIVE_CONV v bod (variant (vars_in tm) (mk_var("w",(type_of v)))) 
+        in(
+        addNotEff eff_thm;
+        add_all_ne_thms bod)
+    | Comb(f,a) -> (add_all_ne_thms f; add_all_ne_thms a)
+    | Eval(e,_) -> add_all_ne_thms e
+    | Hole(e,_) -> add_all_ne_thms e
+    | Quote(e) -> add_all_ne_thms e
+    | _ -> ()
+  in
+  add_all_ne_thms tm;;
 
-let ne21 = NOT_FREE_ABS_NOT_EFFECTIVE_CONV 
-  `x:epsilon` `proper_nat_construct (x:epsilon) ==> 
-  (\a1:type. (eval (x:epsilon) to (nat))) (w:type) = 
-  eval (\a1. x) w to (nat)` `z:epsilon`;;
-addNotEff ne21;; 
-
-(* lemmas to simplify first instantiation *)
-let beta_red1 = prove(
-  `!j:epsilon. proper_nat_construct j ==> 
-  (\a0:string. (eval j to (nat))) (w:string) = eval (\a0. j) w to (nat)`,
+(* Creates therorem:                                                          *)
+(* !j:epsilon. proper_nat_construct j ==>                                     *)
+(*   (\tm. (eval (j) to (nat))) (w:type_of tm) = (eval ((\tm. j) w) to (nat)) *)
+let proper_nat_beta_red tm = 
+  if not (is_var tm) then failwith "Term must be a variable" else 
+  let ty = type_of tm in 
+  let ty_ty = matchType ty in 
+  let arg = mk_var("w", ty) in
+  let trm = mk_comb(`(!):(epsilon -> bool) -> bool`,mk_abs(mk_var("j",`:epsilon`),
+    mk_comb(mk_comb(`(==>)`,`proper_nat_construct (j:epsilon)`),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`,mk_comb(mk_abs(tm,`eval (j:epsilon) to (nat)`),
+    mk_var("w", ty))),mk_eval(mk_comb(mk_abs(tm,mk_var("j",`:epsilon`)),
+    mk_var("w", ty)),`:nat`))))) in 
+  prove(
+  trm,
   GEN_TAC THEN 
   DISCH_TAC THEN 
-  MP_TAC(SPEC `j:epsilon` lemma1) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct j`] THEN 
+  MP_ASSUMPTION_TAC(SPEC `j:epsilon` lemma1) THEN 
   DISCH_TAC THEN 
-  MP_TAC(BETA_REDUCE_EVAL `a0:string` `w:string` `j:epsilon` `:nat`) THEN 
+  MP_TAC(BETA_REDUCE_EVAL tm arg `j:epsilon` `:nat`) THEN 
   ASM_REWRITE_TAC[] THEN 
-  MP_TAC(SPECL [`j:epsilon`;`"a0":string`;
-    `(TyMonoCons "list" (TyBase "char")):type`] thm2) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct j`] THEN 
+  MP_ASSUMPTION_TAC(SPECL [`j:epsilon`;tmp_mk_string(explode(fst(dest_var tm)));ty_ty] thm2) THEN 
   DISCH_TAC THEN 
   ASM_REWRITE_TAC[]);;
 
 let taut_lemma = 
   TAUT `!p:bool. !q:bool. !r:bool. ((p ==> q) = (p ==> r)) <=> (p ==> (q = r))`;;
 
-let fin_beta_red1 = prove( 
-  `(proper_nat_construct (x:epsilon) /\ proper_nat_construct (y:epsilon) ==> 
-  (\(a0:string). (eval (add_ebin (x:epsilon) (y:epsilon)) to (nat))) (w:string) =
-  add_unary ((\(a0:string). (eval (x:epsilon) to (nat))) (w:string)) 
-  ((\(a0:string). (eval (y:epsilon) to (nat))) (w:string))) =
-  (proper_nat_construct (x:epsilon) /\ proper_nat_construct (y:epsilon) ==> 
-  (eval (add_ebin (x:epsilon) (y:epsilon)) to (nat)) =
-  add_unary (eval (x:epsilon) to (nat)) (eval (y:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`x:epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `x:epsilon` beta_red1) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red1) THEN 
-  MP_TAC(SPEC `(add_ebin x y):epsilon` beta_red1) THEN
-  PROPER_TYPE_TAC(`x:epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin x y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `x:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin x y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (x:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((add_ebin x y):epsilon)`) THEN 
-  REPEAT DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]
-  );;
-
-let beta_red2 = prove(
-  `!j:epsilon. proper_nat_construct j ==> 
-  (\a1:type. (eval j to (nat))) (w:type) = eval (\a0. j) w to (nat)`,
+ (* Proves the theorem var N-E-I tm and adds it to the NE list *)
+let ne_to_inst var tm arg thm = 
+  let trm = mk_comb(mk_abs(var, tm),arg) in 
+  let theorem = prove(mk_not_effective_in var tm arg,
   GEN_TAC THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `j:epsilon` lemma1) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct j`] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(BETA_REDUCE_EVAL `a1:type` `w:type` `j:epsilon` `:nat`) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  MP_TAC(SPECL [`j:epsilon`;`"a1":string`;`(TyBase "type"):type`] thm2) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct j`] THEN 
-  DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]);;
+  REWRITE_TAC[BETA_RED_BY_SUB trm] THEN 
+  REWRITE_TAC[thm]) in 
+  addNotEff theorem;;
 
-let fin_beta_red2 = prove( 
-  `(proper_nat_construct (x:epsilon) /\ proper_nat_construct (y:epsilon) ==> 
-  (\(a1:type). (eval (add_ebin (x:epsilon) (y:epsilon)) to (nat))) (w:type) =
-  add_unary ((\(a1:type). (eval (x:epsilon) to (nat))) (w:type)) 
-  ((\(a1:type). (eval (y:epsilon) to (nat))) (w:type))) =
-  (proper_nat_construct (x:epsilon) /\ proper_nat_construct (y:epsilon) ==> 
-  (eval (add_ebin (x:epsilon) (y:epsilon)) to (nat)) =
-  add_unary (eval (x:epsilon) to (nat)) (eval (y:epsilon) to (nat)))`,
+
+(*                                              *)
+(* Theorem templates: used for similar theorems *)
+(*                                              *)
+
+let fin_beta_red tm1 tm2 var arg thm = 
+  let tm = 
+    mk_comb(mk_comb(`(=):bool->bool->bool`,
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(mk_comb(`(/\):bool->bool->bool`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`,tm1)),
+    mk_comb(`proper_nat_construct:epsilon -> bool`,tm2))),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`, 
+    mk_comb(mk_abs(var,mk_eval(mk_comb(
+    mk_comb(`add_ebin:epsilon -> epsilon -> epsilon`,tm1),tm2),`:nat`)),arg)),
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`, 
+    mk_comb(mk_abs(var,mk_eval(tm1,`:nat`)),arg)),  
+    mk_comb(mk_abs(var,mk_eval(tm2,`:nat`)),arg))))), 
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(mk_comb(`(/\):bool->bool->bool`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`, tm1)),
+    mk_comb(`proper_nat_construct:epsilon -> bool`, tm2))),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`,
+    mk_eval(mk_comb(mk_comb(`add_ebin:epsilon -> epsilon -> epsilon`,
+    tm1), tm2), `:nat`)), 
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`,
+    mk_eval(tm1, `:nat`)),
+    mk_eval(tm2, `:nat`))))) in
+  let add_1_2 = mk_comb(mk_comb(
+    `add_ebin:epsilon -> epsilon -> epsilon`,tm1),tm2) in
+  prove(tm,
   REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`x:epsilon`;`y:epsilon`] lemma6) THEN 
+  MP_TAC(SPECL [tm1;tm2] lemma6) THEN 
   ASM_REWRITE_TAC[] THEN 
   DISCH_TAC THEN 
-  MP_TAC(SPEC `x:epsilon` beta_red2) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red2) THEN 
-  MP_TAC(SPEC `(add_ebin x y):epsilon` beta_red2) THEN
-  PROPER_TYPE_TAC(`x:epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin x y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `x:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin x y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (x:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((add_ebin x y):epsilon)`) THEN 
-  REPEAT DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]
-  );;
- 
-
-
-(* lemmas to simplify second instantiation *)
-let beta_red3 = 
-  EQ_MP (ALPHA (concl beta_red1) `!j:epsilon. proper_nat_construct j ==> 
-  (\b0:string. (eval j to (nat))) (w:string) = eval (\a0. j) w to (nat)`) beta_red1;;
-
-let fin_beta_red3 = prove( 
-  `(proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct (y:epsilon)
-  ==> (\b0:string. (eval (add_ebin (QuoConst a0 a1) (y:epsilon)) to (nat))) (w:string) =
-  add_unary ((\b0:string. (eval (QuoConst a0 a1) to (nat))) (w:string))
-  ((\b0:string. (eval (y:epsilon) to (nat))) (w:string))) =
-  (proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct (y:epsilon)
-  ==> (eval (add_ebin (QuoConst a0 a1) (y:epsilon)) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`(QuoConst a0 a1):epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `(QuoConst a0 a1):epsilon` beta_red3) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red3) THEN 
-  MP_TAC(SPEC `(add_ebin (QuoConst a0 a1) y):epsilon` beta_red3) THEN
-  PROPER_TYPE_TAC(`(QuoConst a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst a0 a1) y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst a0 a1):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (QuoConst a0 a1) y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((QuoConst a0 a1):epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((add_ebin (QuoConst a0 a1) y):epsilon)`) THEN 
+  MP_TAC(SPEC tm1 thm) THEN 
+  MP_TAC(SPEC tm2 thm) THEN 
+  MP_TAC(SPEC add_1_2 thm) THEN
+  PROPER_TYPE_TAC(tm1) THEN 
+  PROPER_TYPE_TAC(tm2) THEN 
+  PROPER_TYPE_TAC(add_1_2) THEN 
+  (PROPER_NOT_FREE_TAC tm1 `"j"` `TyBase "epsilon"`) THEN 
+  (PROPER_NOT_FREE_TAC tm2 `"j"` `TyBase "epsilon"`) THEN 
+  (PROPER_NOT_FREE_TAC add_1_2 `"j"` `TyBase "epsilon"`) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(`\j:epsilon. (eval (j) to (nat))`, tm1)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(`\j:epsilon. (eval (j) to (nat))`, tm2)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(`\j:epsilon. (eval (j) to (nat))`, add_1_2)) THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[]
   );;
 
-let beta_red4 = 
-  EQ_MP (ALPHA (concl beta_red2) `!j:epsilon. proper_nat_construct j ==> 
-  (\b1:type. (eval j to (nat))) (w:type) = eval (\a0. j) w to (nat)`) beta_red2;;
+let sub_x tm1 tm2 sub =
+  let add_1_2 = mk_comb(mk_comb(`add_ebin`, tm1),tm2) in 
+  let add_sub = mk_comb(mk_comb(`add_ebin`, sub),tm2) in  
+  let tm = 
+    mk_comb(mk_comb(`(=):bool->bool->bool`,
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(mk_comb(`(/\):bool->bool->bool`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`,sub)),
+    mk_comb(`proper_nat_construct:epsilon -> bool`,tm2))),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`, 
+    mk_comb(mk_abs(tm1,mk_eval(mk_comb(
+    mk_comb(`add_ebin:epsilon -> epsilon -> epsilon`,tm1),tm2),`:nat`)),sub)),
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`, 
+    mk_comb(mk_abs(tm1,mk_eval(tm1,`:nat`)),sub)),  
+    mk_comb(mk_abs(tm1,mk_eval(tm2,`:nat`)),sub))))), 
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(mk_comb(`(/\):bool->bool->bool`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`, sub)),
+    mk_comb(`proper_nat_construct:epsilon -> bool`, tm2))),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`,
+    mk_eval(mk_comb(mk_comb(`add_ebin:epsilon -> epsilon -> epsilon`,
+    sub), tm2), `:nat`)), 
+	mk_comb(mk_comb(`add_unary:nat -> nat -> nat`,
+	mk_eval(sub,`:nat`)),
+	mk_eval(tm2,`:nat`))))) 
+  in
+  prove(tm, 
+  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
+  REPEAT DISCH_TAC THEN 
+  MP_TAC(SPECL [sub;tm2] lemma6) THEN 
+  ASM_REWRITE_TAC[] THEN 
+  DISCH_TAC THEN 
+  PROPER_TYPE_TAC(sub) THEN 
+  PROPER_TYPE_TAC(tm2) THEN 
+  PROPER_TYPE_TAC(add_sub) THEN 
+  (PROPER_NOT_FREE_TAC sub `"x"` `TyBase "epsilon"`) THEN 
+  (PROPER_NOT_FREE_TAC tm2 `"x"` `TyBase "epsilon"`) THEN 
+  (PROPER_NOT_FREE_TAC add_sub `"x"` `TyBase "epsilon"`) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(tm1,mk_eval(tm1,`:nat`)),sub)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(tm1,mk_eval(tm2,`:nat`)),sub)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(tm1,mk_eval(add_1_2,`:nat`)),sub)));;  
+  
 
-let fin_beta_red4 = prove(
-  `(proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-  ==> (\b1. (eval (add_ebin (QuoConst a0 a1) y) to (nat))) (w:type) =
-  add_unary ((\b1. (eval (QuoConst a0 a1) to (nat))) w)
-  ((\b1. (eval (y) to (nat))) w)) =
-  (proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
+let sub_y tm1 tm2 sub =
+  let add_1_2 = mk_comb(mk_comb(`add_ebin`, tm1),tm2) in 
+  let add_sub = mk_comb(mk_comb(`add_ebin`, tm1),sub) in  
+  let tm = 
+    mk_comb(mk_comb(`(=):bool->bool->bool`,
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(mk_comb(`(/\):bool->bool->bool`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`,tm1)),
+    mk_comb(`proper_nat_construct:epsilon -> bool`,sub))),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`, 
+    mk_comb(mk_abs(tm2,mk_eval(mk_comb(
+    mk_comb(`add_ebin:epsilon -> epsilon -> epsilon`,tm1),tm2),`:nat`)),sub)),
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`, 
+    mk_comb(mk_abs(tm2,mk_eval(tm1,`:nat`)),sub)),  
+    mk_comb(mk_abs(tm2,mk_eval(tm2,`:nat`)),sub))))), 
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(mk_comb(`(/\):bool->bool->bool`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`, tm1)),
+    mk_comb(`proper_nat_construct:epsilon -> bool`, sub))),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`,
+    mk_eval(mk_comb(mk_comb(`add_ebin:epsilon -> epsilon -> epsilon`,
+    tm1),sub),`:nat`)), 
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`,
+    mk_eval(tm1,`:nat`)),
+    mk_eval(sub,`:nat`))))) 
+  in
+  prove(tm, 
+  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
+  REPEAT DISCH_TAC THEN 
+  MP_TAC(SPECL [tm1;sub] lemma6) THEN 
+  ASM_REWRITE_TAC[] THEN 
+  DISCH_TAC THEN 
+  PROPER_TYPE_TAC(tm1) THEN 
+  PROPER_TYPE_TAC(sub) THEN 
+  PROPER_TYPE_TAC(add_sub) THEN 
+  (PROPER_NOT_FREE_TAC tm1 `"y"` `TyBase "epsilon"`) THEN 
+  (PROPER_NOT_FREE_TAC sub `"y"` `TyBase "epsilon"`) THEN 
+  (PROPER_NOT_FREE_TAC add_sub `"y"` `TyBase "epsilon"`) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(tm2,mk_eval(tm1,`:nat`)),sub)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(tm2,mk_eval(tm2,`:nat`)),sub)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(tm2,mk_eval(add_1_2,`:nat`)),sub)));;  
+  
+let sub_add_one tm = 
+  let var = mk_var("x",`:epsilon`) in 
+  let add_one_sub = mk_comb(mk_comb(`add_ebin`,`QuoConst "One" (TyBase "nat")`),var) in
+  let add_one_tm = mk_comb(mk_comb(`add_ebin`,`QuoConst "One" (TyBase "nat")`),tm) in
+  let trm = 
+    mk_comb(mk_comb(`(=):bool->bool->bool`,
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`,tm)),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`, 
+    mk_comb(mk_abs(var,mk_eval(add_one_sub,`:nat`)),tm)),
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`, 
+    `One`),  
+    mk_comb(mk_abs(var,mk_eval(var,`:nat`)),tm))))), 
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`, tm)),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`,
+    mk_eval(add_one_tm,`:nat`)), 
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`,
+    `One`),
+    mk_eval(tm,`:nat`))))) 
+  in 
+  prove(trm,
+  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
+  REPEAT DISCH_TAC THEN
+  SUBGOAL_THEN `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
+  REWRITE_TAC[proper_nat_construct] THEN  
+  MP_TAC(SPECL [`(QuoConst "One" (TyBase "nat")):epsilon`;tm] lemma6) THEN 
+  ASM_REWRITE_TAC[] THEN 
+  DISCH_TAC THEN 
+  PROPER_TYPE_TAC(`(QuoConst "One" (TyBase "nat")):epsilon`) THEN 
+  PROPER_TYPE_TAC(tm) THEN 
+  PROPER_TYPE_TAC(add_one_tm) THEN 
+  (PROPER_NOT_FREE_TAC tm `"x"` `TyBase "epsilon"`) THEN 
+  (PROPER_NOT_FREE_TAC add_one_tm `"x"` `TyBase "epsilon"`) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(var,mk_eval(add_one_sub,`:nat`)),tm)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(var,mk_eval(var,`:nat`)),tm))
+  );;
+
+let no_sub_add_one var sub = 
+  let x = mk_var("x",`:epsilon`) in 
+  let one = `QuoConst "One" (TyBase "nat")` in
+  let add_one_tm = mk_comb(mk_comb(`add_ebin`,`QuoConst "One" (TyBase "nat")`),x) in
+  let trm = 
+    mk_comb(mk_comb(`(=):bool->bool->bool`,
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`,x)),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`, 
+    mk_comb(mk_abs(var,mk_eval(add_one_tm,`:nat`)),sub)),
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`, 
+    `One`),  
+    mk_comb(mk_abs(var,mk_eval(x,`:nat`)),sub))))), 
+    mk_comb(mk_comb(`(==>)`,
+    mk_comb(`proper_nat_construct:epsilon -> bool`, x)),
+    mk_comb(mk_comb(`(=):nat -> nat -> bool`,
+    mk_eval(add_one_tm,`:nat`)), 
+    mk_comb(mk_comb(`add_unary:nat -> nat -> nat`,
+    `One`),
+    mk_eval(x,`:nat`))))) 
+  in 
+  prove(trm,
+  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
+  REPEAT DISCH_TAC THEN 
+  MP_TAC(SPECL [one;x] lemma6) THEN 
+  ASM_REWRITE_TAC[proper_nat_construct] THEN 
+  DISCH_TAC THEN 
+  SUBGOAL_THEN `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
+  REWRITE_TAC[proper_nat_construct] THEN 
+  PROPER_TYPE_TAC(one) THEN 
+  PROPER_TYPE_TAC(x) THEN 
+  PROPER_TYPE_TAC(add_one_tm) THEN 
+  (PROPER_NOT_FREE_TAC 
+    one (tmp_mk_string(explode(fst(dest_var var)))) (matchType(type_of var))) THEN 
+  (PROPER_NOT_FREE_TAC x (tmp_mk_string(explode(fst(dest_var var)))) (matchType(type_of var))) THEN 
+  (PROPER_NOT_FREE_TAC 
+    add_one_tm (tmp_mk_string(explode(fst(dest_var var)))) (matchType(type_of var))) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(var,mk_eval(one,`:nat`)),sub)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(var,mk_eval(x,`:nat`)),sub)) THEN 
+  NAT_BETA_EVAL_RED(mk_comb(mk_abs(var,mk_eval(add_one_tm,`:nat`)),sub))
+  );;
+
+(*                                         *)
+(* NOT-EFFECTIVE-IN LEMMAS                 *)
+(*                                         *)
+  
+let ne1 = TRIV_NE `\x:epsilon. proper_nat_construct (x:epsilon) ==> 
+  (\a0:string. (eval (x:epsilon) to (nat))) (w:string) = eval (\a0. x) w to (nat)`
+
+let ne21 = TRIV_NE `\x:epsilon. proper_nat_construct (x:epsilon) ==> 
+  (\a1:type. (eval (x:epsilon) to (nat))) (w:type) = eval (\a1. x) w to (nat)`
+
+let beta_red1 = proper_nat_beta_red (mk_var("a0", `:string`));;
+let fin_beta_red1 = 
+  fin_beta_red `x:epsilon` `y:epsilon` `a0:string` `w:string` beta_red1;;
+let a0_ne = 
+  ne_to_inst `a0:string` 
+  `\x:epsilon. !y:epsilon. proper_nat_construct x /\ proper_nat_construct y ==>
+  (eval (add_ebin x y) to (nat)) = 
+  add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:string` fin_beta_red1;;
+
+let beta_red2 = proper_nat_beta_red(mk_var("a1",`:type`));;
+let fin_beta_red2 = 
+  fin_beta_red `x:epsilon` `y:epsilon` `a1:type` `w:type` beta_red2;;
+let a1_ne = 
+  ne_to_inst `a1:type` 
+  `\x:epsilon. !y:epsilon. proper_nat_construct x /\ proper_nat_construct y ==>
+  (eval (add_ebin x y) to (nat)) = 
+  add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:type` fin_beta_red2;;
+
+let beta_red3 = proper_nat_beta_red(mk_var("b0",`:string`));;
+let fin_beta_red3 = 
+  fin_beta_red `QuoConst a0 a1` `y:epsilon` `b0:string` `w:string` beta_red3;;
+let b0_ne = 
+  ne_to_inst `b0:string` 
+  `\y. proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
   ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`(QuoConst a0 a1):epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `(QuoConst a0 a1):epsilon` beta_red4) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red4) THEN 
-  MP_TAC(SPEC `(add_ebin (QuoConst a0 a1) y):epsilon` beta_red4) THEN
-  PROPER_TYPE_TAC(`(QuoConst a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst a0 a1) y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst a0 a1):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (QuoConst a0 a1) y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((QuoConst a0 a1):epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((add_ebin (QuoConst a0 a1) y):epsilon)`) THEN 
-  REPEAT DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]
-  );;
+  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:string` fin_beta_red3;;
 
-let beta_red5 = prove(
-  `!j:epsilon. proper_nat_construct j ==> 
-  (\b0:epsilon. (eval j to (nat))) (w:epsilon) = eval (\a0. j) w to (nat)`,
-  GEN_TAC THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `j:epsilon` lemma1) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct j`] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(BETA_REDUCE_EVAL `b0:epsilon` `w:epsilon` `j:epsilon` `:nat`) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  MP_TAC(SPECL [`j:epsilon`;`"b0":string`;`(TyBase "epsilon"):type`] thm2) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct j`] THEN 
-  DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]);;
+let beta_red4 = proper_nat_beta_red(mk_var("b1",`:type`));;
+let fin_beta_red4 = 
+  fin_beta_red `QuoConst a0 a1` `y:epsilon` `b1:type` `w:type` beta_red4;;
+let b1_ne = 
+  ne_to_inst `b1:type` 
+  `\y. proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
+  ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
+  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:type` fin_beta_red4;;
 
-let fin_beta_red5 = prove(
-  `(proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct (y:epsilon)
-  ==> (\b0:epsilon. (eval (add_ebin (QuoConst a0 a1) (y:epsilon)) to (nat))) (w:epsilon) =
-  add_unary ((\b0:epsilon. (eval (QuoConst a0 a1) to (nat))) (w:epsilon))
-  ((\b0:epsilon. (eval (y:epsilon) to (nat))) (w:epsilon))) =
-  (proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct (y:epsilon)
-  ==> (eval (add_ebin (QuoConst a0 a1) (y:epsilon)) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`(QuoConst a0 a1):epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `(QuoConst a0 a1):epsilon` beta_red5) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red5) THEN 
-  MP_TAC(SPEC `(add_ebin (QuoConst a0 a1) y):epsilon` beta_red5) THEN
-  PROPER_TYPE_TAC(`(QuoConst a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst a0 a1) y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst a0 a1):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (QuoConst a0 a1) y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((QuoConst a0 a1):epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`(\j:epsilon. (eval (j) to (nat))) ((add_ebin (QuoConst a0 a1) y):epsilon)`) THEN 
-  REPEAT DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]
-  );;
+let beta_red5 = proper_nat_beta_red(mk_var("b0",`:epsilon`));;
+let fin_beta_red5 = 
+  fin_beta_red `QuoConst a0 a1` `y:epsilon` `b0:epsilon` `w:epsilon` beta_red5;;
+let b0_eps_ne = 
+  ne_to_inst `b0:epsilon` 
+  `\y. proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
+  ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
+  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon` fin_beta_red5;;
 
-let beta_red6 = 
-  EQ_MP (ALPHA (concl beta_red5)`!j:epsilon. proper_nat_construct j ==> 
-  (\a0:epsilon. (eval j to (nat))) (w:epsilon) = eval (\a0. j) w to (nat)`) beta_red5;;
-
-let fin_beta_red6 = prove(
-  `(proper_nat_construct (x:epsilon) /\ proper_nat_construct (y:epsilon) ==> 
-  (\(a0:epsilon). (eval (add_ebin (x:epsilon) (y:epsilon)) to (nat))) (w:epsilon) =
-  add_unary ((\(a0:epsilon). (eval (x:epsilon) to (nat))) (w:epsilon)) 
-  ((\(a0:epsilon). (eval (y:epsilon) to (nat))) (w:epsilon))) =
-  (proper_nat_construct (x:epsilon) /\ proper_nat_construct (y:epsilon) ==> 
-  (eval (add_ebin (x:epsilon) (y:epsilon)) to (nat)) =
-  add_unary (eval (x:epsilon) to (nat)) (eval (y:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`x:epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `x:epsilon` beta_red6) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red6) THEN 
-  MP_TAC(SPEC `(add_ebin x y):epsilon` beta_red6) THEN
-  PROPER_TYPE_TAC(`x:epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin x y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `x:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin x y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (x:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((add_ebin x y):epsilon)`) THEN 
-  REPEAT DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]
-  );;
-
-let fin_beta_red7 = prove(
-  `(proper_nat_construct (App a0 a1) ==> proper_nat_construct (y:epsilon)
-  ==> (\b0:string. (eval (add_ebin (App a0 a1) (y:epsilon)) to (nat))) (w:string) =
-  add_unary ((\b0:string. (eval (App a0 a1) to (nat))) (w:string))
-  ((\b0:string. (eval (y:epsilon) to (nat))) (w:string))) =
-  (proper_nat_construct (App a0 a1) ==> proper_nat_construct (y:epsilon)
-  ==> (eval (add_ebin (App a0 a1) (y:epsilon)) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) (eval (y:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`(App a0 a1):epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `(App a0 a1):epsilon` beta_red3) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red3) THEN 
-  MP_TAC(SPEC `(add_ebin (App a0 a1) y):epsilon` beta_red3) THEN
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (App a0 a1) y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (App a0 a1) y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((App a0 a1):epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((add_ebin (App a0 a1) y):epsilon)`) THEN 
-  REPEAT DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]
-  );;
-
-let fin_beta_red8 = prove(
-  `(proper_nat_construct (App a0 a1) ==> proper_nat_construct y
-  ==> (\b1. (eval (add_ebin (App a0 a1) y) to (nat))) (w:type) =
-  add_unary ((\b1. (eval (App a0 a1) to (nat))) w)
-  ((\b1. (eval (y) to (nat))) w)) =
-  (proper_nat_construct (App a0 a1) ==> proper_nat_construct y
-  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`(App a0 a1):epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `(App a0 a1):epsilon` beta_red4) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red4) THEN 
-  MP_TAC(SPEC `(add_ebin (App a0 a1) y):epsilon` beta_red4) THEN
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (App a0 a1) y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (App a0 a1) y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((App a0 a1):epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((add_ebin (App a0 a1) y):epsilon)`) THEN 
-  REPEAT DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]
-  );;
-
-let fin_beta_red9 = prove( 
-  `(proper_nat_construct (App a0 a1) ==> proper_nat_construct (y:epsilon)
-  ==> (\b0:epsilon. (eval (add_ebin (App a0 a1) (y:epsilon)) to (nat))) (w:epsilon) =
-  add_unary ((\b0:epsilon. (eval (App a0 a1) to (nat))) (w:epsilon))
-  ((\b0:epsilon. (eval (y:epsilon) to (nat))) (w:epsilon))) =
-  (proper_nat_construct (App a0 a1) ==> proper_nat_construct (y:epsilon)
-  ==> (eval (add_ebin (App a0 a1) (y:epsilon)) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) (eval (y:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  MP_TAC(SPECL [`(App a0 a1):epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  MP_TAC(SPEC `(App a0 a1):epsilon` beta_red5) THEN 
-  MP_TAC(SPEC `y:epsilon` beta_red5) THEN 
-  MP_TAC(SPEC `(add_ebin (App a0 a1) y):epsilon` beta_red5) THEN
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (App a0 a1) y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (App a0 a1) y):epsilon` `"j"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) (y:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((App a0 a1):epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`(\j:epsilon. (eval (j) to (nat))) ((add_ebin (App a0 a1) y):epsilon)`) THEN 
-  REPEAT DISCH_TAC THEN 
-  ASM_REWRITE_TAC[]
-  );;
-
-
-
-
-
-(* Needed to do first induction *)
-let ind_1 = NOT_FREE_ABS_NOT_EFFECTIVE_CONV `x:epsilon` 
-  `!y:epsilon. (((proper_nat_construct (x:epsilon)) /\ 
-  (proper_nat_construct (y:epsilon))) ==> 
-  (eval (add_ebin x y) to (nat) = 
-  add_unary (eval x to (nat)) (eval y to (nat))))` `w:epsilon`;;
-addNotEff ind_1;;
-
-let a0_ne = prove(
-  mk_not_effective_in `a0:string` 
-  `\x:epsilon. !y:epsilon. proper_nat_construct x /\ proper_nat_construct y ==>
-  (eval (add_ebin x y) to (nat)) = 
-  add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:string`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\a0:string. \x:epsilon. !y:epsilon. 
-  	proper_nat_construct x /\ proper_nat_construct y ==> 
-    (eval (add_ebin x y) to (nat)) = 
-    add_unary (eval (x) to (nat)) (eval (y) to (nat))) (w:string)`] THEN 
-  REWRITE_TAC[fin_beta_red1]
-  );;
-addNotEff a0_ne;;
-
-let a1_ne = prove(
-  mk_not_effective_in `a1:type` 
-  `\x:epsilon. !y:epsilon. proper_nat_construct x /\ proper_nat_construct y ==>
-  (eval (add_ebin x y) to (nat)) = 
-  add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:type`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\a1:type. \x:epsilon. !y:epsilon. 
-  	proper_nat_construct x /\ proper_nat_construct y ==> 
-    (eval (add_ebin x y) to (nat)) = 
-    add_unary (eval (x) to (nat)) (eval (y) to (nat))) (w:type)`] THEN 
-  REWRITE_TAC[fin_beta_red2]
-  );;
-addNotEff a1_ne;;
-
-let a0_eps_ne = prove(
-  mk_not_effective_in `a0:epsilon` 
+let beta_red6 = proper_nat_beta_red(mk_var("a0",`:epsilon`));;
+let fin_beta_red6 = 
+  fin_beta_red `x:epsilon` `y:epsilon` `a0:epsilon` `w:epsilon` beta_red6;;
+let a0_eps_ne = 
+  ne_to_inst `a0:epsilon` 
   `\x. !y. proper_nat_construct x /\ proper_nat_construct y
   ==> (eval (add_ebin x y) to (nat)) =
-  add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:epsilon`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\a0:epsilon. \x:epsilon. !y:epsilon. 
-    proper_nat_construct x /\ proper_nat_construct y
-    ==> (eval (add_ebin x y) to (nat)) =
-    add_unary (eval (x) to (nat)) (eval (y) to (nat))) (w:epsilon)`] THEN 
-  REWRITE_TAC[fin_beta_red6]
-  );;
-addNotEff a0_eps_ne;;
+  add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:epsilon` fin_beta_red6;;
 
+let fin_beta_red7 =
+  let tm = 
+    fin_beta_red `App a0 a1` `y:epsilon` `b0:string` `w:string` beta_red3 
+  in 
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;;
+let b0_app_ne = 
+  ne_to_inst `b0:string` 
+  `\y. proper_nat_construct (App a0 a1)
+  ==> proper_nat_construct y
+  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
+  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:string` fin_beta_red7;;
+
+let fin_beta_red8 =
+  let tm = 
+    fin_beta_red `App a0 a1` `y:epsilon` `b1:type` `w:type` beta_red4 
+  in 
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;;
+let b1_app_ne = 
+  ne_to_inst `b1:type` 
+  `\y. proper_nat_construct (App a0 a1) ==> proper_nat_construct y
+  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
+  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:type` fin_beta_red8;;
+
+let fin_beta_red9 =
+  let tm = 
+    fin_beta_red `App a0 a1` `y:epsilon` `b0:epsilon` `w:epsilon` beta_red5 
+  in 
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;;
+let b0_eps_app_ne = 
+  ne_to_inst `b0:epsilon` 
+  `\y. proper_nat_construct (App a0 a1) ==> proper_nat_construct y
+  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
+  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon` fin_beta_red9;;
+
+let beta_red10 = proper_nat_beta_red(mk_var("a1",`:epsilon`));;
+let fin_beta_red10 = 
+  fin_beta_red `x:epsilon` `y:epsilon` `a1:epsilon` `w:epsilon` beta_red10;;
 let a1_eps_ne = 
-  let tm = (mk_not_effective_in `a1:epsilon` 
-  	`\x. !y. proper_nat_construct x /\ proper_nat_construct y
-    ==> (eval (add_ebin x y) to (nat)) =
-    add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:epsilon`) in
-  EQ_MP (ALPHA (concl a0_eps_ne) tm) a0_eps_ne;;
-addNotEff a1_eps_ne;;
+  ne_to_inst `a1:epsilon` 
+  `\x. !y. proper_nat_construct x /\ proper_nat_construct y
+  ==> (eval (add_ebin x y) to (nat)) =
+  add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:epsilon` fin_beta_red10;;
 
-let a_eps_ne = 
-  let tm = (mk_not_effective_in `a:epsilon` 
-    `\x. !y. proper_nat_construct x /\ proper_nat_construct y
-    ==> (eval (add_ebin x y) to (nat)) =
-    add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:epsilon`) in
-  EQ_MP (ALPHA (concl a0_eps_ne) tm) a0_eps_ne;;
-addNotEff a_eps_ne;;
+let beta_red11 = proper_nat_beta_red(mk_var("a",`:epsilon`));;
+let fin_beta_red11 = 
+  fin_beta_red `x:epsilon` `y:epsilon` `a:epsilon` `w:epsilon` beta_red11;;
+let a1_eps_ne = 
+  ne_to_inst `a:epsilon` 
+  `\x. !y. proper_nat_construct x /\ proper_nat_construct y
+  ==> (eval (add_ebin x y) to (nat)) =
+  add_unary (eval (x) to (nat)) (eval (y) to (nat))` `w:epsilon` fin_beta_red11;;
 
-(* Second Induction(s) *)
+let beta_red12 = proper_nat_beta_red(mk_var("b1",`:epsilon`));;
+let fin_beta_red12 = 
+  fin_beta_red `QuoConst a0 a1` `y:epsilon` `b1:epsilon` `w:epsilon` beta_red12;;
+let b1_eps_ne =
+  ne_to_inst `b1:epsilon` 
+    `\y. proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
+    ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
+    add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon` fin_beta_red12;;
+
+let fin_beta_red13 =
+  let tm = 
+    fin_beta_red `App a0 a1` `y:epsilon` `b1:epsilon` `w:epsilon` beta_red12 
+  in 
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;;
+let b0_eps_app_ne = 
+  ne_to_inst `b1:epsilon` 
+  `\y. proper_nat_construct (App a0 a1) ==> proper_nat_construct y
+  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
+  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon` fin_beta_red13;;
+
+let ind_1 = TRIV_NE `\x:epsilon. !y:epsilon. (((proper_nat_construct (x:epsilon)) /\ 
+  (proper_nat_construct (y:epsilon))) ==> 
+  (eval (add_ebin x y) to (nat) = 
+  add_unary (eval x to (nat)) (eval y to (nat))))`;;
 
 (* Need an induction theorem with different bound variables for second inductions *)
 let eps_alt_ind = 
@@ -953,619 +915,95 @@ let eps_alt_ind =
   (!b0 b1. P b0 /\ P b1 ==> P (Abs b0 b1)) /\
   (!b. P b ==> P (Quo b)) ==> (!b. P b)`) lth;;
 
-let ind_y1 = NOT_FREE_ABS_NOT_EFFECTIVE_CONV `y:epsilon` 
-  `proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-  ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon`;;
-addNotEff ind_y1;;
+let ind_y1 = TRIV_NE `\y:epsilon. proper_nat_construct (QuoConst a0 a1) /\ 
+  proper_nat_construct y ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
+  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))`;;
 
-let b0_ne = prove(
-  mk_not_effective_in `b0:string` 
-  `\y. proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-  ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:string`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\b0:string. \y:epsilon. 
-    proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-    ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-    add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))) (w:string)`] THEN 
-  REWRITE_TAC[fin_beta_red3]
-  );;
-addNotEff b0_ne;;
-
-let b1_ne = prove(
-  mk_not_effective_in `b1:type` 
-  `\y. proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-  ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:type`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\b1:type. \y:epsilon. 
-    proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-    ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-    add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))) (w:type)`] THEN 
-  REWRITE_TAC[fin_beta_red4]
-  );;
-addNotEff b1_ne;;
-
-
-let b0_eps_ne = prove(
-  mk_not_effective_in `b0:epsilon` 
-  `\y. proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-  ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\b0:epsilon. \y:epsilon. 
-    proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-    ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-    add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))) (w:epsilon)`] THEN 
-  REWRITE_TAC[fin_beta_red5]
-  );;
-addNotEff b0_eps_ne;;
-
-let b1_eps_ne = 
-  let tm = (mk_not_effective_in `b1:epsilon` 
-    `\y. proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct y
-    ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-    add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon`) 
-  in
-  EQ_MP (ALPHA (concl b0_eps_ne) tm) b0_eps_ne;;
-addNotEff b1_eps_ne;;
-
-let ind_y2 = NOT_FREE_ABS_NOT_EFFECTIVE_CONV `y:epsilon` 
-  `proper_nat_construct (App a0 a1)
+let ind_y2 = TRIV_NE `\y:epsilon. proper_nat_construct (App a0 a1)
   ==> proper_nat_construct y
   ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon`;;
-addNotEff ind_y2;;
-
-let b0_app_ne = prove(
-  mk_not_effective_in `b0:string` 
-  `\y. proper_nat_construct (App a0 a1)
-  ==> proper_nat_construct y
-  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:string`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\b0:string. \y. proper_nat_construct (App a0 a1)
-    ==> proper_nat_construct y
-    ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-    add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))) (w:string)`] THEN 
-  REWRITE_TAC[fin_beta_red7]
-  );;
-addNotEff b0_app_ne;;
-
-let b1_app_ne = prove(
-  mk_not_effective_in `b1:type` 
-  `\y. proper_nat_construct (App a0 a1) ==> proper_nat_construct y
-  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:type`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\b1:type. \y:epsilon. 
-    proper_nat_construct (App a0 a1) ==> proper_nat_construct y
-    ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-    add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))) (w:type)`] THEN 
-  REWRITE_TAC[fin_beta_red8]
-  );;
-addNotEff b1_app_ne;;
-
-let b0_eps_app_ne = prove(
-  mk_not_effective_in `b0:epsilon` 
-  `\y. proper_nat_construct (App a0 a1) ==> proper_nat_construct y
-  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB 
-    `(\b0:epsilon. \y:epsilon. proper_nat_construct (App a0 a1) ==> 
-    proper_nat_construct y
-    ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-    add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))) (w:epsilon)`] THEN 
-  REWRITE_TAC[fin_beta_red9]
-  );;
-addNotEff b0_eps_app_ne;;
-
-let b1_eps_app_ne = 
-  let tm = (mk_not_effective_in `b1:epsilon` 
-  	`\y. proper_nat_construct (App a0 a1) ==> proper_nat_construct y
-    ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-    add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))` `w:epsilon`) 
-  in
-  EQ_MP (ALPHA (concl b0_eps_app_ne) tm) b0_eps_app_ne;;
-addNotEff b1_eps_app_ne;;
+  add_unary (eval (App a0 a1) to (nat)) (eval (y) to (nat))`;;
 
 
 (* Simplyifying lemmas *)
-let x_quoconst_sub = prove( 
-  `(proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct (y:epsilon)
-  ==> (\x:epsilon. (eval (add_ebin x y) to (nat))) (QuoConst a0 a1) =
-  add_unary ((\x:epsilon. (eval (x) to (nat))) (QuoConst a0 a1))
-  ((\x:epsilon. (eval (y) to (nat))) (QuoConst a0 a1))) = 
-  (proper_nat_construct (QuoConst a0 a1) /\ proper_nat_construct (y:epsilon)
-  ==> (eval (add_ebin (QuoConst a0 a1) y) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat)) (eval (y) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(QuoConst a0 a1):epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(QuoConst a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst a0 a1) y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst a0 a1):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (QuoConst a0 a1) y):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\x:epsilon. (eval (add_ebin x (y:epsilon)) to (nat))) (QuoConst a0 a1)`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (x) to (nat))) (QuoConst a0 a1))`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (y:epsilon) to (nat))) (QuoConst a0 a1))`)  
-  );;
+let x_quoconst_sub = 
+  sub_x `x:epsilon` `y:epsilon` `QuoConst a0 a1`;;
 
-let y_quoconst_sub = prove( 
-  `(proper_nat_construct (QuoConst a0 a1) /\
-  proper_nat_construct (QuoConst b0 b1)
-  ==> (\y. (eval (add_ebin (QuoConst a0 a1) y) to (nat))) (QuoConst b0 b1) =
-  add_unary ((\y. (eval (QuoConst a0 a1) to (nat))) (QuoConst b0 b1))
-  ((\y. (eval (y) to (nat))) (QuoConst b0 b1))) = 
-  (proper_nat_construct (QuoConst a0 a1) /\
-  proper_nat_construct (QuoConst b0 b1)
-  ==> (eval (add_ebin (QuoConst a0 a1) (QuoConst b0 b1)) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat))
-  (eval (QuoConst b0 b1) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(QuoConst a0 a1):epsilon`;`(QuoConst b0 b1):epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(QuoConst a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(QuoConst b0 b1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst a0 a1) (QuoConst b0 b1)):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst b0 b1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst a0 a1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin (QuoConst a0 a1) (QuoConst b0 b1)):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`(\y:epsilon. (eval (add_ebin (QuoConst a0 a1) (y)) to (nat))) (QuoConst b0 b1)`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (QuoConst a0 a1) to (nat))) (QuoConst b0 b1))`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (y) to (nat))) (QuoConst b0 b1))`)  
-  );;
+let y_quoconst_sub = 
+  sub_y `QuoConst a0 a1` `y:epsilon` `QuoConst b0 b1`;;
 
-let y_quoapp_sub = prove( 
-  `(proper_nat_construct (QuoConst a0 a1) /\
-  proper_nat_construct (App b0 b1)
-  ==> (\y. (eval (add_ebin (QuoConst a0 a1) y) to (nat))) (App b0 b1) =
-  add_unary ((\y. (eval (QuoConst a0 a1) to (nat))) (App b0 b1))
-  ((\y. (eval (y) to (nat))) (App b0 b1))) = 
-  (proper_nat_construct (QuoConst a0 a1) /\
-  proper_nat_construct (App b0 b1)
-  ==> (eval (add_ebin (QuoConst a0 a1) (App b0 b1)) to (nat)) =
-  add_unary (eval (QuoConst a0 a1) to (nat))
-  (eval (App b0 b1) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(QuoConst a0 a1):epsilon`;`(App b0 b1):epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(QuoConst a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(App b0 b1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst a0 a1) (App b0 b1)):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(App b0 b1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst a0 a1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin (QuoConst a0 a1) (App b0 b1)):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`(\y:epsilon. (eval (add_ebin (QuoConst a0 a1) (y)) to (nat))) (App b0 b1)`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (QuoConst a0 a1) to (nat))) (App b0 b1))`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (y) to (nat))) (App b0 b1))`)  
-  );;
+let y_quoapp_sub =
+  sub_y `QuoConst a0 a1` `y:epsilon` `App b0 b1`;;
 
-let x_quoapp_sub = prove(
-  `(proper_nat_construct (App a0 a1)
-  ==> proper_nat_construct y
-  ==> (\x. (eval (add_ebin x y) to (nat))) (App a0 a1) =
-  add_unary ((\x. (eval (x) to (nat))) (App a0 a1))
-  ((\x. (eval (y) to (nat))) (App a0 a1))) = 
-  (proper_nat_construct (App a0 a1)
-  ==> proper_nat_construct y
-  ==> (eval (add_ebin (App a0 a1) y) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat))
-  (eval (y) to (nat)))`,
-  REWRITE_TAC[taut_lemma] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(App a0 a1):epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (App a0 a1) (y:epsilon)):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (App a0 a1) (y:epsilon)):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\x:epsilon. (eval (add_ebin (x) (y:epsilon)) to (nat))) (App a0 a1)`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (x) to (nat))) (App a0 a1))`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (y:epsilon) to (nat))) (App a0 a1))`)
-  );;
+let x_quoapp_sub = 
+  sub_x `x:epsilon` `y:epsilon` `App a0 a1`;;
 
-let y_quoconst2_sub = prove( 
-  `(proper_nat_construct (App a0 a1) ==>
-  proper_nat_construct (QuoConst b0 b1)
-  ==> (\y. (eval (add_ebin (App a0 a1) y) to (nat))) (QuoConst b0 b1) =
-  add_unary ((\y. (eval (App a0 a1) to (nat))) (QuoConst b0 b1))
-  ((\y. (eval (y) to (nat))) (QuoConst b0 b1))) = 
-  (proper_nat_construct (App a0 a1) ==>
-  proper_nat_construct (QuoConst b0 b1)
-  ==> (eval (add_ebin (App a0 a1) (QuoConst b0 b1)) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat))
-  (eval (QuoConst b0 b1) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(App a0 a1):epsilon`;`(QuoConst b0 b1):epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(QuoConst b0 b1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (App a0 a1) (QuoConst b0 b1)):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst b0 b1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin (App a0 a1) (QuoConst b0 b1)):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`(\y:epsilon. (eval (add_ebin (App a0 a1) (y)) to (nat))) (QuoConst b0 b1)`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (App a0 a1) to (nat))) (QuoConst b0 b1))`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (y) to (nat))) (QuoConst b0 b1))`)  
-  );;
+let y_quoconst2_sub = 
+  let tm = sub_y `App a0 a1` `y:epsilon` `QuoConst b0 b1`
+  in
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;; 
 
-let x_case1_sub = prove( 
-  `(proper_nat_construct a0 /\ proper_nat_construct y
-  ==> (\x. (eval (add_ebin x y) to (nat))) a0 =
-  add_unary ((\x. (eval (x) to (nat))) a0)
-  ((\x. (eval (y) to (nat))) a0)) = 
-  (proper_nat_construct a0 /\ proper_nat_construct y
-  ==> (eval (add_ebin a0 y) to (nat)) =
-  add_unary (eval a0 to (nat)) 
-  (eval (y) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`a0:epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`a0:epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin a0 y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `a0:epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (a0:epsilon) (y:epsilon)):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\x:epsilon. (eval (add_ebin x (y)) to (nat))) (a0:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval x to (nat))) (a0:epsilon))`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (y:epsilon) to (nat))) (a0:epsilon))`)  
-  );;
+let x_case1_sub = 
+  sub_x `x:epsilon` `y:epsilon` `a0:epsilon`;;
 
-let x_case2_sub = prove( 
-  `(proper_nat_construct a1 /\ proper_nat_construct y
-  ==> (\x. (eval (add_ebin x y) to (nat))) a1 =
-  add_unary ((\x. (eval (x) to (nat))) a1)
-  ((\x. (eval (y) to (nat))) a1)) = 
-  (proper_nat_construct a1 /\ proper_nat_construct y
-  ==> (eval (add_ebin a1 y) to (nat)) =
-  add_unary (eval a1 to (nat)) 
-  (eval (y) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`a1:epsilon`;`y:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`a1:epsilon`) THEN 
-  PROPER_TYPE_TAC(`y:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin a1 y):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `a1:epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `y:epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (a1:epsilon) (y:epsilon)):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\x:epsilon. (eval (add_ebin x (y)) to (nat))) (a1:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval x to (nat))) (a1:epsilon))`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (y:epsilon) to (nat))) (a1:epsilon))`)  
-  );;
+let x_case2_sub = 
+  sub_x `x:epsilon` `y:epsilon` `a1:epsilon`;;
 
-let y_case1_sub = prove(
-  `(proper_nat_construct (App a0 a1)
-  ==> proper_nat_construct b0
-  ==> (\y:epsilon. (eval (add_ebin (App a0 a1) y) to (nat))) b0 =
-  add_unary ((\y:epsilon. (eval (App a0 a1) to (nat))) b0)
-  ((\y:epsilon. (eval (y) to (nat))) b0)) = 
-  (proper_nat_construct (App a0 a1) /\ proper_nat_construct b0
-  ==> (eval (add_ebin (App a0 a1) b0) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) 
-  (eval (b0:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(App a0 a1):epsilon`;`b0:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`b0:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (App a0 a1) b0):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `b0:epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin ((App a0 a1):epsilon) (b0:epsilon)):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\y:epsilon. (eval (add_ebin (App a0 a1) (y)) to (nat))) (b0:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (App a0 a1) to (nat))) (b0:epsilon))`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (y:epsilon) to (nat))) (b0:epsilon))`)  
-  );;
+let y_case1_sub = 
+  let tm = sub_y `App a0 a1` `y:epsilon` `b0:epsilon` 
+  in
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;;
 
-let y_case2_sub = prove(
-  `(proper_nat_construct (App a0 a1)
-  ==> proper_nat_construct b1
-  ==> (\y:epsilon. (eval (add_ebin (App a0 a1) y) to (nat))) b1 =
-  add_unary ((\y:epsilon. (eval (App a0 a1) to (nat))) b1)
-  ((\y:epsilon. (eval (y) to (nat))) b1)) = 
-  (proper_nat_construct (App a0 a1) /\ proper_nat_construct b1
-  ==> (eval (add_ebin (App a0 a1) b1) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) 
-  (eval (b1:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(App a0 a1):epsilon`;`b1:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`b1:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (App a0 a1) b1):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `b1:epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin ((App a0 a1):epsilon) (b1:epsilon)):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\y:epsilon. (eval (add_ebin (App a0 a1) (y)) to (nat))) (b1:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (App a0 a1) to (nat))) (b1:epsilon))`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (y:epsilon) to (nat))) (b1:epsilon))`)  
-  );;
+let y_case2_sub = 
+  let tm = sub_y `App a0 a1` `y:epsilon` `b1:epsilon` 
+  in
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;;
 
-let y_quoapp_app_sub = prove(
-  `(proper_nat_construct (App a0 a1)
-  ==> proper_nat_construct (App b0 b1)
-  ==> (\y:epsilon. (eval (add_ebin (App a0 a1) y) to (nat))) (App b0 b1) =
-  add_unary ((\y:epsilon. (eval (App a0 a1) to (nat))) (App b0 b1))
-  ((\y:epsilon. (eval (y) to (nat))) (App b0 b1))) = 
-  (proper_nat_construct (App a0 a1) /\ proper_nat_construct (App b0 b1)
-  ==> (eval (add_ebin (App a0 a1) (App b0 b1)) to (nat)) =
-  add_unary (eval (App a0 a1) to (nat)) 
-  (eval ((App b0 b1):epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(App a0 a1):epsilon`;`(App b0 b1):epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(App b0 b1):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (App a0 a1) (App b0 b1)):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(App b0 b1):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin ((App a0 a1):epsilon) ((App b0 b1):epsilon)):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`(\y:epsilon. (eval (add_ebin (App a0 a1) (y)) to (nat))) ((App b0 b1):epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (App a0 a1) to (nat))) ((App b0 b1):epsilon))`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (y:epsilon) to (nat))) ((App b0 b1):epsilon))`)  
-  );;
+let y_quoapp_app_sub = 
+  let tm = sub_y `App a0 a1` `y:epsilon` `App b0 b1` 
+  in
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;;
 
-let y_quoapp_case1_sub = prove(
-  `(proper_nat_construct (a1:epsilon)
-  ==> proper_nat_construct (b1:epsilon)
-  ==> (\y:epsilon. (eval (add_ebin a1 y) to (nat))) b1 =
-  add_unary ((\y:epsilon. (eval (a1) to (nat))) b1)
-  ((\y:epsilon. (eval (y) to (nat))) b1)) = 
-  (proper_nat_construct (a1:epsilon)
-  ==> proper_nat_construct (b1:epsilon)
-  ==> (eval (add_ebin a1 b1) to (nat)) =
-  add_unary (eval (a1) to (nat))
-  (eval (b1) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`a1:epsilon`;`b1:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`a1:epsilon`) THEN 
-  PROPER_TYPE_TAC(`b1:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin a1 b1):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `a1:epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `b1:epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin (a1:epsilon) (b1:epsilon)):epsilon` `"y"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(`(\y:epsilon. (eval (add_ebin a1 (y)) to (nat))) (b1:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (a1:epsilon) to (nat))) (b1:epsilon))`) THEN 
-  NAT_BETA_EVAL_RED(`((\y:epsilon. (eval (y:epsilon) to (nat))) (b1:epsilon))`)  
-   );;
+let y_quoapp_case1_sub = 
+  let tm = sub_y `a1:epsilon` `y:epsilon` `b1:epsilon` 
+  in
+  EQ_MP (REWRITE_CONV[IMP_CONJ] (concl tm)) tm;;
 
-let fin_x_sub = prove(
-  `proper_nat_construct (add_ebin a1 b1) ==> 
-  ((\x. (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)))
-  (add_ebin a1 b1) =
-  add_unary One ((\x. (eval (x) to (nat))) (add_ebin a1 b1))) = 
-  ((eval (add_ebin (QuoConst "One" (TyBase "nat")) (add_ebin a1 b1)) to (nat)) =
-  add_unary One (eval (add_ebin a1 b1) to (nat)))`,
-  DISCH_TAC THEN 
-  SUBGOAL_THEN `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
-  REWRITE_TAC[proper_nat_construct] THEN 
-  MP_TAC(SPECL [
-  	`(QuoConst "One" (TyBase "nat")):epsilon`;`(add_ebin a1 b1):epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(QuoConst "One" (TyBase "nat")):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin a1 b1):epsilon`) THEN 
-  PROPER_TYPE_TAC(
-  	`(add_ebin (QuoConst "One" (TyBase "nat")) (add_ebin a1 b1)):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(add_ebin a1 b1):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin (QuoConst "One" (TyBase "nat")) (add_ebin a1 b1)):epsilon` 
-  	`"x"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`(\x:epsilon. (eval (add_ebin (QuoConst "One" (TyBase "nat")) (x)) to (nat))) 
-  	(add_ebin a1 b1)`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (x:epsilon) to (nat))) (add_ebin a1 b1))`)
-  );;
+let fin_x_sub = 
+  let tm = sub_add_one `add_ebin a1 b1` in
+  EQ_MP (REWRITE_CONV[taut_lemma] (concl tm)) tm;;
 
 
-(* Final theroem needed *)
-let ind_3 = NOT_FREE_ABS_NOT_EFFECTIVE_CONV `x:epsilon` 
-  `proper_nat_construct x ==> 
+(* Final theorem needed *)
+let ind_3 = TRIV_NE `\x:epsilon. proper_nat_construct x ==> 
   eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat) = 
-  add_unary One (eval x to (nat))` `w:epsilon`;;
-addNotEff ind_3;;
+  add_unary One (eval x to (nat))`;;
 
-let x_thm3_sub = prove( 
-  `(proper_nat_construct x
-  ==> (\a0:string. (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat))) (w:string) =
-  add_unary One ((\a0:string. (eval (x) to (nat))) (w:string))) = 
-  (proper_nat_construct x
-  ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-  add_unary One (eval (x) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(QuoConst "One" (TyBase "nat")):epsilon`;`x:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[proper_nat_construct] THEN 
-  DISCH_TAC THEN 
-  SUBGOAL_THEN `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
-  REWRITE_TAC[proper_nat_construct] THEN 
-  PROPER_TYPE_TAC(`(QuoConst "One" (TyBase "nat")):epsilon`) THEN 
-  PROPER_TYPE_TAC(`x:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst "One" (TyBase "nat")) x):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(QuoConst "One" (TyBase "nat")):epsilon` `"a0"` `TyMonoCons "list" (TyBase "char")`) THEN 
-  (PROPER_NOT_FREE_TAC `(x):epsilon` `"a0"` `TyMonoCons "list" (TyBase "char")`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin (QuoConst "One" (TyBase "nat")) x):epsilon` `"a0"` 
-  	`TyMonoCons "list" (TyBase "char")`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`(\a0:string. 
-  	(eval (add_ebin (QuoConst "One" (TyBase "nat")) (x:epsilon)) to (nat))) (w:string)`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`((\a0:string. (eval (QuoConst "One" (TyBase "nat")) to (nat))) (w:string))`) THEN 
-  NAT_BETA_EVAL_RED(`((\a0:string. (eval (x:epsilon) to (nat))) (w:string))`)  
-  );;
+let x_thm3_sub = no_sub_add_one `a0:string` `w:string`;;
 
-let a0_ne_thm3 = prove(
-  mk_not_effective_in `a0:string` 
+let a0_ne_thm3 = 
+  ne_to_inst `a0:string` 
   `\x. proper_nat_construct x
   ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-  add_unary One (eval (x) to (nat))` `w:string`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\a0:string. \x. proper_nat_construct x
-    ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-    add_unary One (eval (x) to (nat))) (w:string)`] THEN 
-  REWRITE_TAC[x_thm3_sub]
-  );;
-addNotEff a0_ne_thm3;;
+  add_unary One (eval (x) to (nat))` `w:string` x_thm3_sub;;
 
-let a1_thm3_sub = prove( 
-  `(proper_nat_construct x
-  ==> (\a1:type. (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat))) (w:type) =
-  add_unary One ((\a1:type. (eval (x) to (nat))) (w:type))) = 
-  (proper_nat_construct x
-  ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-  add_unary One (eval (x) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(QuoConst "One" (TyBase "nat")):epsilon`;`x:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[proper_nat_construct] THEN 
-  DISCH_TAC THEN 
-  SUBGOAL_THEN `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
-  REWRITE_TAC[proper_nat_construct] THEN 
-  PROPER_TYPE_TAC(`(QuoConst "One" (TyBase "nat")):epsilon`) THEN 
-  PROPER_TYPE_TAC(`x:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst "One" (TyBase "nat")) x):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(QuoConst "One" (TyBase "nat")):epsilon` `"a1"` `TyBase "type"`) THEN 
-  (PROPER_NOT_FREE_TAC `(x):epsilon` `"a1"` `TyBase "type"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-  	`(add_ebin (QuoConst "One" (TyBase "nat")) x):epsilon` `"a1"` `TyBase "type"`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`(\a1:type. 
-  	(eval (add_ebin (QuoConst "One" (TyBase "nat")) (x:epsilon)) to (nat))) (w:type)`) THEN 
-  NAT_BETA_EVAL_RED(
-  	`((\a1:type. (eval (QuoConst "One" (TyBase "nat")) to (nat))) (w:type))`) THEN 
-  NAT_BETA_EVAL_RED(`((\a1:type. (eval (x:epsilon) to (nat))) (w:type))`)  
-  );;
+let a1_thm3_sub = no_sub_add_one `a1:type` `w:type`;;
 
-let a1_ne_thm3 = prove(
-  mk_not_effective_in `a1:type` 
+let a1_ne_thm3 = 
+  ne_to_inst `a1:type` 
   `\x. proper_nat_construct x
   ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-  add_unary One (eval (x) to (nat))` `w:type`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\a1:type. \x. proper_nat_construct x
-    ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-    add_unary One (eval (x) to (nat))) (w:type)`] THEN 
-  REWRITE_TAC[a1_thm3_sub]
-  );;
-addNotEff a1_ne_thm3;;
+  add_unary One (eval (x) to (nat))` `w:type` a1_thm3_sub;;
 
-let thm3_x_quoconst = prove(
-  `(proper_nat_construct (QuoConst a0 a1)
-  ==> (\x. (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)))
-  (QuoConst a0 a1) =
-  add_unary One ((\x. (eval (x) to (nat))) (QuoConst a0 a1))) = 
-  (proper_nat_construct (QuoConst a0 a1)
-  ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) (QuoConst a0 a1)) to (nat)) =
-  add_unary One (eval (QuoConst a0 a1) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [
-    `(QuoConst "One" (TyBase "nat")):epsilon`;
-    `(QuoConst a0 a1):epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[proper_nat_construct] THEN 
-  DISCH_TAC THEN 
-  SUBGOAL_THEN `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
-  REWRITE_TAC[proper_nat_construct] THEN 
-  PROPER_TYPE_TAC(`(QuoConst "One" (TyBase "nat")):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(QuoConst a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(
-    `(add_ebin (QuoConst "One" (TyBase "nat")) (QuoConst a0 a1)):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(QuoConst a0 a1):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-    `(add_ebin (QuoConst "One" (TyBase "nat")) 
-    (QuoConst a0 a1)):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-    `(\x:epsilon. (eval (add_ebin (QuoConst "One" (TyBase "nat")) 
-    (x:epsilon)) to (nat))) (QuoConst a0 a1)`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (x:epsilon) to (nat))) (QuoConst a0 a1))`)  
-  );;
+let thm3_x_quoconst = sub_add_one `QuoConst a0 a1`;;
 
-let x_eps_thm3_sub = prove( 
-  `(proper_nat_construct x ==> 
-  (\a0:epsilon. (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat))) (w:epsilon) =
-  add_unary One ((\a0:epsilon. (eval (x) to (nat))) (w:epsilon))) = 
-  (proper_nat_construct x ==> 
-  (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-  add_unary One (eval (x) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN 
-  MP_TAC(SPECL [`(QuoConst "One" (TyBase "nat")):epsilon`;`x:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[proper_nat_construct] THEN 
-  DISCH_TAC THEN 
-  SUBGOAL_THEN `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
-  REWRITE_TAC[proper_nat_construct] THEN 
-  PROPER_TYPE_TAC(`(QuoConst "One" (TyBase "nat")):epsilon`) THEN 
-  PROPER_TYPE_TAC(`x:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst "One" (TyBase "nat")) x):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC 
-    `(QuoConst "One" (TyBase "nat")):epsilon` `"a0"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC `(x):epsilon` `"a0"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-    `(add_ebin (QuoConst "One" (TyBase "nat")) x):epsilon` `"a0"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-    `(\a0:epsilon. (eval (add_ebin (QuoConst "One" (TyBase "nat")) 
-    (x:epsilon)) to (nat))) (w:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(
-    `((\a0:epsilon. (eval (QuoConst "One" (TyBase "nat")) to (nat))) (w:epsilon))`) THEN 
-  NAT_BETA_EVAL_RED(`((\a0:epsilon. (eval (x:epsilon) to (nat))) (w:epsilon))`)  
-  );;
+let x_eps_thm3_sub = no_sub_add_one `a0:epsilon` `w:epsilon`;;
 
-let a0_eps_ne_thm3 = prove(
-  mk_not_effective_in `a0:epsilon` 
+let a0_eps_ne_thm3 = 
+  ne_to_inst `a0:epsilon` 
   `\x. proper_nat_construct x
   ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-  add_unary One (eval (x) to (nat))` `w:epsilon`,
-  GEN_TAC THEN 
-  REWRITE_TAC[BETA_RED_BY_SUB `(\a0:epsilon. \x. proper_nat_construct x
-    ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat)) =
-    add_unary One (eval (x) to (nat))) (w:epsilon)`] THEN 
-  REWRITE_TAC[x_eps_thm3_sub]
-  );;
-addNotEff a0_eps_ne_thm3;;
+  add_unary One (eval (x) to (nat))` `w:epsilon` x_eps_thm3_sub;;
 
 let a1_eps_ne_thm3 = 
   let tm = (mk_not_effective_in `a1:epsilon` 
@@ -1585,66 +1023,11 @@ let a_eps_ne_thm3 =
   EQ_MP (ALPHA (concl a0_eps_ne_thm3) tm) a0_eps_ne_thm3;;
 addNotEff a_eps_ne_thm3;;
 
-let sub_a1_thm = prove(
-  `(proper_nat_construct a1
-  ==> (\x:epsilon. 
-  (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat))) a1 =
-  add_unary One ((\x:epsilon. (eval (x) to (nat))) a1)) = 
-  (proper_nat_construct a1
-  ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) a1) to (nat)) =
-  add_unary One (eval (a1:epsilon) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  SUBGOAL_THEN 
-    `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
-  REWRITE_TAC[proper_nat_construct] THEN  
-  MP_TAC(SPECL [
-    `(QuoConst "One" (TyBase "nat")):epsilon`;`a1:epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(QuoConst "One" (TyBase "nat")):epsilon`) THEN 
-  PROPER_TYPE_TAC(`a1:epsilon`) THEN 
-  PROPER_TYPE_TAC(`(add_ebin (QuoConst "One" (TyBase "nat")) a1):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `a1:epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-    `(add_ebin ((QuoConst "One" (TyBase "nat")):epsilon) 
-    (a1:epsilon)):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-    `(\x:epsilon. (eval (add_ebin (QuoConst "One" (TyBase "nat")) 
-    (x:epsilon)) to (nat))) (a1:epsilon)`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (x:epsilon) to (nat))) (a1:epsilon))`) 
-  );;
+let sub_a1_thm = sub_add_one `a1:epsilon`;;
 
-let sub_app_thm = prove(
-  `(proper_nat_construct (App a0 a1)
-  ==> (\x:epsilon. 
-  (eval (add_ebin (QuoConst "One" (TyBase "nat")) x) to (nat))) (App a0 a1) =
-  add_unary One ((\x:epsilon. (eval (x) to (nat))) (App a0 a1))) = 
-  (proper_nat_construct (App a0 a1)
-  ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) (App a0 a1)) to (nat)) =
-  add_unary One (eval (App a0 a1) to (nat)))`,
-  REWRITE_TAC[taut_lemma;IMP_CONJ] THEN 
-  REPEAT DISCH_TAC THEN
-  SUBGOAL_THEN 
-    `proper_nat_construct (QuoConst "One" (TyBase "nat"))` ASSUME_TAC THEN 
-  REWRITE_TAC[proper_nat_construct] THEN  
-  MP_TAC(SPECL [
-    `(QuoConst "One" (TyBase "nat")):epsilon`;`(App a0 a1):epsilon`] lemma6) THEN 
-  ASM_REWRITE_TAC[] THEN 
-  DISCH_TAC THEN 
-  PROPER_TYPE_TAC(`(QuoConst "One" (TyBase "nat")):epsilon`) THEN 
-  PROPER_TYPE_TAC(`(App a0 a1):epsilon`) THEN 
-  PROPER_TYPE_TAC(
-    `(add_ebin (QuoConst "One" (TyBase "nat")) (App a0 a1)):epsilon`) THEN 
-  (PROPER_NOT_FREE_TAC `(App a0 a1):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  (PROPER_NOT_FREE_TAC 
-    `(add_ebin ((QuoConst "One" (TyBase "nat")):epsilon) 
-    ((App a0 a1):epsilon)):epsilon` `"x"` `TyBase "epsilon"`) THEN 
-  NAT_BETA_EVAL_RED(
-    `(\x:epsilon. (eval (add_ebin (QuoConst "One" (TyBase "nat")) 
-    (x:epsilon)) to (nat))) (App a0 a1)`) THEN 
-  NAT_BETA_EVAL_RED(`((\x:epsilon. (eval (x:epsilon) to (nat))) (App a0 a1))`) 
-  );;
+let sub_app_thm = sub_add_one `App a0 a1`;;
+
+let sub_b1_thm = sub_add_one `b1:epsilon`;;
 
 let thm3 = prove(
   `!x:epsilon. proper_nat_construct x ==> 
@@ -1658,7 +1041,7 @@ let thm3 = prove(
   REWRITE_TAC[thm3_x_quoconst] THEN 
   REWRITE_TAC[proper_nat_construct;IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"`) THEN 
+  TOP_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] THEN 
   CONSTRUCTION_TO_QUOTE_TAC THEN 
   LAW_OF_DISQUO_TAC THEN 
@@ -1670,9 +1053,7 @@ let thm3 = prove(
   DISCH_TAC THEN 
   REWRITE_TAC[proper_nat_construct;IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `(a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")))`) THEN 
+  TOP_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] THENL
   [MP_TAC(APP_DISQUO 
     `QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))` 
@@ -1708,10 +1089,9 @@ let thm3 = prove(
   CONSTRUCTION_TO_QUOTE_TAC THEN 
   LAW_OF_DISQUO_TAC THEN 
   REWRITE_TAC[one_def;take_s;id_of_plus;add_one_even] THEN 
-  MP_TAC(ASSUME `proper_nat_construct a1
+  MP_ASSUMPTION_TAC(ASSUME `proper_nat_construct a1
   ==> (eval (add_ebin (QuoConst "One" (TyBase "nat")) a1) to (nat)) =
   add_unary One (eval (a1) to (nat))`) THEN 
-  REWRITE_TAC[ASSUME `proper_nat_construct a1`] THEN 
   DISCH_TAC THEN 
   QUOTE_TO_CONSTRUCTION_TAC THEN
   ASM_REWRITE_TAC[
@@ -1722,7 +1102,6 @@ let thm3 = prove(
   ]
   ]
   );;
-
 
 
 (*                                                     *)
@@ -1755,8 +1134,8 @@ let add_meaning =
   REPEAT GEN_TAC THEN 
   REWRITE_TAC[y_quoconst_sub;proper_nat_construct;IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"`) THEN 
-  DISJ_CASES_TAC(ASSUME `b0 = "Zero" \/ b0 = "One"`) THEN 
+  TOP_DISJ_CASES_TAC THEN 
+  BOTTOM_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] THEN 
   CONSTRUCTION_TO_QUOTE_TAC THEN 
   LAW_OF_DISQUO_TAC THEN 
@@ -1766,16 +1145,16 @@ let add_meaning =
   REPEAT GEN_TAC THEN
   REWRITE_TAC[y_quoapp_sub;proper_nat_construct;IMP_CONJ] THEN
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"`) THENL
+  TOP_DISJ_CASES_TAC THENL
   [ASM_REWRITE_TAC[add_ebin] THEN 
   CONSTRUCTION_TO_QUOTE_TAC THEN 
   LAW_OF_DISQUO_TAC THEN 
   REWRITE_TAC[id_of_plus]
-  ;DISJ_CASES_TAC(ASSUME 
-    `b0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    b0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
+  ;BOTTOM_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] THENL
-  [MP_TAC(APP_DISQUO 
+  [
+
+  MP_TAC(APP_DISQUO 
     `QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))` 
     `b1:epsilon`) THEN 
   MP_TAC(APP_DISQUO 
@@ -1785,6 +1164,10 @@ let add_meaning =
   IS_EXPR_TYPE_TAC THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN
+
+
+
+
   CONSTRUCTION_TO_QUOTE_TAC THEN 
   LAW_OF_DISQUO_TAC THEN
   REWRITE_TAC[remove_one]
@@ -1804,42 +1187,12 @@ let add_meaning =
   IS_EXPR_TYPE_TAC THEN 
   REPEAT DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN 
-  CONSTRUCTION_TO_QUOTE_TAC THEN 
-  LAW_OF_DISQUO_TAC THEN 
-  MP_TAC(SPECL [`(QuoConst "One" (TyBase "nat"))`;`b1:epsilon`] lemma6) THEN 
-  REWRITE_TAC[
-    ASSUME `proper_nat_construct (b1:epsilon)`;
-    proper_nat_construct] THEN 
+  MP_TAC(SPEC `b1:epsilon` thm3) THEN 
+  REWRITE_TAC[sub_b1_thm;ASSUME `proper_nat_construct b1`] THEN
   DISCH_TAC THEN 
-  MP_TAC(ASSUME `a0 = "Zero" \/ a0 = "One"
-    ==> a1 = TyBase "nat"
-    ==> proper_nat_construct b1
-    ==> (\y. (eval (add_ebin (QuoConst a0 a1) y) to (nat))) b1 =
-    add_unary ((\y. (eval (QuoConst a0 a1) to (nat))) b1)
-    ((\y. (eval (y) to (nat))) b1)`) THEN 
-  REWRITE_TAC[
-    ASSUME `a0 = "One"`; 
-    ASSUME `a1 = TyBase "nat"`; 
-    ASSUME `proper_nat_construct b1`] THEN 
-  (PROPER_NOT_FREE_TAC 
-    `(add_ebin (QuoConst "One" (TyBase "nat")) b1):epsilon` 
-    `"y":string` `(TyBase "epsilon"):type`) THEN 
-  NAT_BETA_EVAL_RED(
-    `(\y. (eval (add_ebin (QuoConst "One" (TyBase "nat")) y) to (nat))) b1`) THEN 
-  (PROPER_NOT_FREE_TAC 
-    `(QuoConst "One" (TyBase "nat"))` 
-    `"y":string` `(TyBase "epsilon"):type`) THEN 
-  MP_TAC(IS_EXPR_TYPE_CONV `One:nat`) THEN 
-  DISCH_TAC THEN 
-  NAT_BETA_EVAL_RED(
-    `(\y:epsilon. (eval (QuoConst "One" (TyBase "nat")) to (nat))) b1`) THEN 
-  (PROPER_NOT_FREE_TAC `b1:epsilon` `"y":string` `(TyBase "epsilon"):type`) THEN 
-  NAT_BETA_EVAL_RED(`(\y:epsilon. (eval (y) to (nat))) b1`) THEN 
-  DISCH_TAC THEN 
-  QUOTE_TO_CONSTRUCTION_TAC THEN 
   ASM_REWRITE_TAC[] THEN 
   CONSTRUCTION_TO_QUOTE_TAC THEN 
-  LAW_OF_DISQUO_TAC THEN
+  LAW_OF_DISQUO_TAC THEN 
   REWRITE_TAC[carry_one]
   ]
   ]
@@ -1862,14 +1215,12 @@ let add_meaning =
   REWRITE_TAC[y_quoconst2_sub;proper_nat_construct] THEN
   REWRITE_TAC[IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME `(b0 = "Zero" \/ b0 = "One")`) THENL
+  BOTTOM_DISJ_CASES_TAC THENL
   [ASM_REWRITE_TAC[add_ebin] THEN 
   CONSTRUCTION_TO_QUOTE_TAC THEN 
   LAW_OF_DISQUO_TAC THEN 
   REWRITE_TAC[add_unary]
-  ;DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
+  ;TOP_DISJ_CASES_TAC THEN 
   ASM_REWRITE_TAC[add_ebin] THENL
   [MP_TAC(APP_DISQUO 
     `QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))` 
@@ -1901,47 +1252,14 @@ let add_meaning =
   PROPER_TYPE_TAC(`a1:epsilon`) THEN
   IS_EXPR_TYPE_TAC THEN 
   REPEAT DISCH_TAC THEN 
+  ASM_REWRITE_TAC[] THEN
+  MP_TAC(SPEC `a1:epsilon` thm3) THEN 
+  REWRITE_TAC[sub_a1_thm;ASSUME `proper_nat_construct a1`] THEN
+  DISCH_TAC THEN 
   ASM_REWRITE_TAC[] THEN 
   CONSTRUCTION_TO_QUOTE_TAC THEN 
   LAW_OF_DISQUO_TAC THEN 
-  MP_TAC(SPEC `QuoConst "One" (TyBase "nat")` (ASSUME 
-    `!y. proper_nat_construct a1
-    ==> proper_nat_construct y
-    ==> (eval (add_ebin a1 y) to (nat)) =
-    add_unary (eval (a1) to (nat)) (eval (y) to (nat))`)) THEN 
-  MP_TAC(SPECL [`a1:epsilon`;`(QuoConst "One" (TyBase "nat"))`] lemma6) THEN 
-  REWRITE_TAC[ 
-    ASSUME `proper_nat_construct (a1:epsilon)`;
-    proper_nat_construct] THEN 
-  DISCH_TAC THEN 
-  (PROPER_NOT_FREE_TAC 
-    `(add_ebin a1 (QuoConst "One" (TyBase "nat"))):epsilon` 
-    `"y":string` `(TyBase "epsilon"):type`) THEN 
-  NAT_BETA_EVAL_RED(
-    `(\y:epsilon. (eval (add_ebin (a1:epsilon) y) to (nat))) 
-    (QuoConst "One" (TyBase "nat"))`) THEN 
-  (PROPER_NOT_FREE_TAC `a1:epsilon` `"y":string` `(TyBase "epsilon"):type`) THEN 
-  NAT_BETA_EVAL_RED(
-    `(\y:epsilon. (eval 
-    (a1:epsilon) to (nat))) (QuoConst "One" (TyBase "nat"))`) THEN 
-  (PROPER_NOT_FREE_TAC 
-    `QuoConst "One" (TyBase "nat")` `"y":string` `(TyBase "epsilon"):type`) THEN 
-  NAT_BETA_EVAL_RED(
-    `(\y:epsilon. (eval (y) to (nat))) (QuoConst "One" (TyBase "nat"))`) THEN 
-  IS_EXPR_TYPE_TAC THEN 
-  DISCH_TAC THEN 
-  QUOTE_TO_CONSTRUCTION_TAC THEN 
-  MP_TAC(
-    SPECL [`(QuoConst "One" (TyBase "nat"))`;`a1:epsilon`] ebin_sym_add) THEN 
-  REWRITE_TAC[
-    ASSUME `proper_nat_construct (a1:epsilon)`;
-    proper_nat_construct] THEN 
-  DISCH_TAC THEN 
-  ASM_REWRITE_TAC[] THEN 
-  CONSTRUCTION_TO_QUOTE_TAC THEN
-  LAW_OF_DISQUO_TAC THEN 
-  REWRITE_TAC[sym_add] THEN 
-  REWRITE_TAC[carry_one]
+  REWRITE_TAC[sym_add;carry_one]
   ]
   ]
   ;CONJ_TAC THENL
@@ -1953,12 +1271,8 @@ let add_meaning =
   REWRITE_TAC[proper_nat_construct] THEN 
   REWRITE_TAC[IMP_CONJ] THEN 
   REPEAT DISCH_TAC THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `a0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    a0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN 
-  DISJ_CASES_TAC(ASSUME 
-    `b0 = QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat")) \/
-    b0 = QuoConst "thenOne" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))`) THEN
+  TOP_DISJ_CASES_TAC THEN 
+  BOTTOM_DISJ_CASES_TAC THEN
   ASM_REWRITE_TAC[add_ebin] THENL
   [MP_TAC(APP_DISQUO 
     `QuoConst "thenZero" (TyBiCons "fun" (TyBase "nat") (TyBase "nat"))` 
